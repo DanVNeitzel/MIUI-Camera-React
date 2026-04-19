@@ -1,0 +1,195 @@
+.container {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center center;
+  display: block;
+}
+
+/* Loading spinner */
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  z-index: 5;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.errorIcon {
+  width: 56px;
+  height: 56px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.errorTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+.errorMessage {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+  max-width: 260px;
+  font-family: var(--font-sans);
+}
+
+/* Focus ring */
+.focusRing {
+  position: absolute;
+  width: 62px;
+  height: 62px;
+  border: 2px solid rgba(255, 210, 0, 0.9);
+  border-radius: 4px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: focusAnimate 1.6s ease forwards;
+  z-index: 10;
+}
+
+/* Camera switch overlay */
+.switchOverlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 6;
+  pointer-events: none;
+  animation: switchFade 0.45s ease forwards;
+}
+
+@keyframes switchFade {
+  0%   { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Timer countdown overlay */
+.timerWrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.timerNumber {
+  font-size: 110px;
+  font-weight: 100;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+  animation: timerPulse 0.9s ease forwards;
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+
+@keyframes timerPulse {
+  0%   { transform: scale(1.45); opacity: 0; }
+  20%  { transform: scale(1);    opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+@keyframes focusAnimate {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ── Portrait vignette ──────────────────────────────────────── */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 72% 82% at 50% 46%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.48) 100%
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Mode badge ────────────────────────────────────────────── */
+.modeBadge {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  animation: badgeFadeIn 0.25s ease;
+}
+
+.modeBadgeIcon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+@keyframes badgeFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+}

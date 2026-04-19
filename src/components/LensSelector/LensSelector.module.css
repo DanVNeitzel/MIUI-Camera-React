@@ -1,0 +1,66 @@
+.strip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px 2px;
+  /* Slide down from above on appearance */
+  animation: stripIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stripIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* ── Pill button ──────────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 15px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+  white-space: nowrap;
+  /* Accessible tap target */
+  touch-action: manipulation;
+}
+
+.pill:hover:not(.pillActive) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.pill:active {
+  transform: scale(0.93);
+}
+
+/* ── Active / selected state ─────────────────────────────── */
+.pillActive {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: transparent;
+  color: #111;
+  /* subtle glow */
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+
+.pillActive:hover {
+  background: #fff;
+  color: #111;
+}

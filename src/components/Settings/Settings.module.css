@@ -1,0 +1,200 @@
+/* ── Backdrop ─────────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  /* subtle backdrop fade-in */
+  animation: backdropIn 0.22s ease;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Bottom sheet ──────────────────────────────────────────────── */
+.sheet {
+  width: 100%;
+  max-height: 88svh;
+  background: #1a1a1a;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(60%); opacity: 0.6; }
+  to   { transform: translateY(0);   opacity: 1;   }
+}
+
+/* ── Handle ────────────────────────────────────────────────────── */
+.handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.closeBtn:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* ── Scrollable content ────────────────────────────────────────── */
+.content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 24px;
+  flex: 1;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+/* ── Section title ─────────────────────────────────────────────── */
+.sectionTitle {
+  margin: 18px 0 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+.sectionTitle:first-child { margin-top: 4px; }
+
+/* ── Setting row ───────────────────────────────────────────────── */
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rowLabel {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+}
+
+/* ── Chip group ────────────────────────────────────────────────── */
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.chipActive {
+  background: var(--color-accent, #ff6a00);
+  border-color: var(--color-accent, #ff6a00);
+  color: #fff;
+}
+.chipActive:hover {
+  background: #ff7f1e;
+  border-color: #ff7f1e;
+}
+
+/* ── Filter strip ──────────────────────────────────────────────── */
+.filterStrip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.filterStrip::-webkit-scrollbar { display: none; }
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.filterSwatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: border-color 0.15s, transform 0.15s;
+  will-change: transform;
+}
+
+.filterItem:hover .filterSwatch {
+  transform: scale(1.08);
+}
+
+.filterItemActive .filterSwatch {
+  border-color: var(--color-accent, #ff6a00);
+  transform: scale(1.1);
+}
+
+.filterLabel {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.filterItemActive .filterLabel {
+  color: var(--color-accent, #ff6a00);
+  font-weight: 600;
+}

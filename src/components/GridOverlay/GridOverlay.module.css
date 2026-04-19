@@ -1,0 +1,44 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Rule of thirds */
+.line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.h1 { top: 33.33%;  left: 0; right: 0;  height: 1px; }
+.h2 { top: 66.66%;  left: 0; right: 0;  height: 1px; }
+.v1 { left: 33.33%; top: 0;  bottom: 0; width: 1px;  }
+.v2 { left: 66.66%; top: 0;  bottom: 0; width: 1px;  }
+
+/* Intersection dots */
+.dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Center composition square */
+.squareFrame {
+  position: absolute;
+  aspect-ratio: 1;
+  height: 62%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 2px;
+  /* Corner accents */
+  box-shadow:
+    inset 12px 12px 0 -10px rgba(255, 255, 255, 0.7),
+    inset -12px 12px 0 -10px rgba(255, 255, 255, 0.7),
+    inset 12px -12px 0 -10px rgba(255, 255, 255, 0.7),
+    inset -12px -12px 0 -10px rgba(255, 255, 255, 0.7);
+}

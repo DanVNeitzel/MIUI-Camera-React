@@ -1,0 +1,59 @@
+.app {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+/* Overlay sits above the camera video */
+.uiOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none; /* children opt-in via pointer-events: auto */
+  z-index: 10;
+}
+
+.uiOverlay > * {
+  pointer-events: auto;
+}
+
+/* Top gradient for readability */
+.gradientTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  background: var(--color-overlay-top);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.spacer {
+  flex: 1;
+  pointer-events: none;
+}
+
+/* Bottom area with controls */
+.bottomArea {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Bottom gradient */
+.gradientBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: -80px;
+  background: var(--color-overlay-bottom);
+  pointer-events: none;
+  z-index: -1;
+}

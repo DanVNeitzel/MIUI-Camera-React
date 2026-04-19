@@ -1,0 +1,176 @@
+.panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.72);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.panel::-webkit-scrollbar { display: none; }
+
+/* ── Each parameter row ──────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+/* ── Label + value pair ──────────────────────────────── */
+.labelGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 28px;
+}
+
+.paramName {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.paramValue {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent, #ff6a00);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── Slider track ───────────────────────────────────── */
+.sliderTrack {
+  position: relative;
+  width: 110px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sliderFill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 3px;
+  background: var(--color-accent, #ff6a00);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* WB gradient track */
+.wbGradient {
+  position: absolute;
+  inset: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #ff9933 0%,
+    #fff5e0 30%,
+    #ffffff 50%,
+    #e0f0ff 70%,
+    #7ab8ff 100%
+  );
+  pointer-events: none;
+}
+
+/* Native range input — transparent, sits on top */
+.slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  /* Expand touch target */
+  touch-action: none;
+}
+
+.sliderWb {
+  /* WB slider uses gradient track instead of fill */
+}
+
+/* Visible thumb using pseudo-elements — since the input is transparent,
+   we render the thumb as an absolutely positioned element via JS (not possible),
+   so we keep the range input semi-transparent and style the thumb directly */
+.sliderTrack input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-accent, #ff6a00);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  opacity: 1;
+}
+
+.sliderTrack input[type="range"] {
+  opacity: 1;
+  background: transparent;
+  -webkit-appearance: none;
+}
+
+.sliderTrack input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: transparent;
+  border-radius: 2px;
+}
+
+.sliderTrack input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-accent, #ff6a00);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+.sliderTrack input[type="range"]::-moz-range-track {
+  height: 3px;
+  background: transparent;
+}
+
+/* ── Cosmetic histogram ─────────────────────────────── */
+.histoWrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+  margin-left: 4px;
+}
+
+.histoBar {
+  width: 4px;
+  border-radius: 1px 1px 0 0;
+  background: rgba(255, 255, 255, 0.4);
+  transition: height 0.3s ease;
+}

@@ -1,0 +1,94 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px;
+  padding-top: calc(16px + var(--safe-top));
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+.actionBtn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  transition: background 0.15s;
+}
+
+.actionBtn:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.imageWrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.bottomActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.closeBtn {
+  padding: 12px 40px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.closeBtn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.97);
+}

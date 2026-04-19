@@ -1,0 +1,92 @@
+.topBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: calc(12px + var(--safe-top));
+  z-index: 20;
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.logo {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2.5px;
+  font-family: var(--font-sans);
+}
+
+/* Recording indicator in center */
+.recordingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recDot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+  animation: recDotPulse 1s ease infinite;
+}
+
+@keyframes recDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+.recTime {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff3b30;
+  font-family: var(--font-sans);
+  letter-spacing: 0.5px;
+}
+
+.iconBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.85);
+  transition: background 0.15s, color 0.15s;
+  gap: 1px;
+}
+
+.iconBtn:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.flashLabel {
+  font-size: 8px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.timerLabel {
+  font-size: 8px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0.5px;
+  line-height: 1;
+}

@@ -1,0 +1,616 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  savePhoto as idbSavePhoto,
+  loadPhotos as idbLoadPhotos,
+  deletePhoto as idbDeletePhoto,
+} from '../utils/photoDB';
+import { FILTER_CSS } from '../utils/filterMap';
+
+const QUALITY_MAP = { low: 0.6, medium: 0.78, high: 0.92, max: 1.0 };
+const MIME_MAP    = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const RES_MAP     = {
+  '720p':  { width: { ideal: 1280 }, height: { ideal: 720  } },
+  '1080p': { width: { ideal: 1920 }, height: { ideal: 1080 } },
+  '4k':    { width: { ideal: 3840 }, height: { ideal: 2160 } },
+};
+
+/**
+ * Parse a browser camera label to derive a display shortLabel and type.
+ * Returns { shortLabel, type, isFront }
+ */
+function parseCameraLabel(label = '', index) {
+  const l = label.toLowerCase();
+  const isFront =
+    l.includes('front') || l.includes('facing front') || l.includes('user');
+
+  if (!label) {
+    // Labels empty before permission — fallback to index
+    return { shortLabel: index === 0 ? '1×' : `${index + 1}×`, type: 'unknown', isFront: false };
+  }
+
+  if (
+    l.includes('ultra') ||
+    l.includes('wide angle') ||
+    l.includes('grand angle') ||
+    /0\.5|0\.6/.test(l)
+  ) {
+    return { shortLabel: '0.5×', type: 'ultrawide', isFront };
+  }
+
+  if (
+    l.includes('tele') ||
+    l.includes('periscope') ||
+    /\b3[x×]|\b3\./.test(l)
+  ) {
+    return { shortLabel: '3×', type: 'tele', isFront };
+  }
+
+  if (/\b2[x×]|\b2\./.test(l)) {
+    return { shortLabel: '2×', type: 'tele2', isFront };
+  }
+
+  // Default — main/wide
+  return { shortLabel: '1×', type: 'main', isFront };
+}
+
+/**
+ * Multi-frame stacking via GPU compositing — NO getImageData / putImageData.
+ *
+ * Algorithm: incremental running average using canvas globalAlpha + source-over.
+ *   Frame i blended at alpha = 1/(i+1) over the accumulated result gives an
+ *   exact equal-weight average for all frames. Everything stays on the GPU.
+ *
+ * ~10× faster than the getImageData/Float32Array approach for 1080p.
+ */
+async function stackFrames(video, w, h, cssFilter, facingMode, count, mime, quality) {
+  const pause  = (ms) => new Promise((r) => setTimeout(r, ms));
+  const useOC  = typeof OffscreenCanvas !== 'undefined';
+
+  const out = useOC
+    ? new OffscreenCanvas(w, h)
+    : (() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; })();
+  const ctx = out.getContext('2d');
+
+  // Opaque black base — required so source-over compositing works correctly
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < count; i++) {
+    if (i > 0) await pause(60); // ~2 video frames at 30 fps
+    ctx.save();
+    ctx.globalAlpha = 1 / (i + 1); // weight for running average
+    if (facingMode === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
+    if (cssFilter) ctx.filter = cssFilter;
+    ctx.drawImage(video, 0, 0, w, h); // GPU-side snapshot of current frame
+    ctx.restore();
+  }
+
+  return useOC
+    ? out.convertToBlob(mime === 'image/png' ? { type: mime } : { type: mime, quality })
+    : new Promise((res) =>
+        mime === 'image/png' ? out.toBlob(res, mime) : out.toBlob(res, mime, quality)
+      );
+}
+
+export function useCamera({
+  photoQuality       = 'high',
+  saveFormat         = 'jpeg',
+  videoResolution    = '1080p',
+  filter             = 'none',
+  filterOverrideCSS  = '',   // raw CSS string — overrides ID-based filter (used by modes)
+  multiFrameCount    = 1,    // >1 = frame-stacking (night mode noise reduction)
+} = {}) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const canvasRef = useRef(null);       // internal fallback canvas (not rendered)
+  const blobUrlsRef = useRef([]);       // track all created object URLs for cleanup
+
+  // Pinch-to-zoom refs
+  const pinchStartDistRef = useRef(null);
+  const pinchStartZoomRef = useRef(null);
+
+  // MediaRecorder refs
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+
+  // Timer refs
+  const timerIntervalRef = useRef(null);
+  const timerRunningRef = useRef(false);
+  const timerDelayRef = useRef(0);
+
+  // Ref mirrors — allow callbacks to read latest value without stale closures
+  const isCapturingRef = useRef(false);
+  const isRecordingRef = useRef(false);
+  const facingModeRef = useRef('environment');
+  const flashModeRef = useRef('off');
+  const zoomRef = useRef(1);
+
+  // Settings refs (updated via useEffect — no stale closure in callbacks)
+  const filterRef              = useRef(filter);
+  const photoQualityRef        = useRef(photoQuality);
+  const saveFormatRef          = useRef(saveFormat);
+  const videoResolutionRef     = useRef(videoResolution);
+  const filterOverrideCSSRef   = useRef(filterOverrideCSS);
+  const multiFrameCountRef     = useRef(multiFrameCount);
+
+  // State
+  const [facingMode, setFacingMode] = useState('environment');
+  const [photos, setPhotos] = useState([]); // [{ id: number, url: string }]
+  const [zoom, setZoom] = useState(1);
+  const [isFlashing, setIsFlashing] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const [cameraList, setCameraList] = useState([]); // [{ deviceId, label, shortLabel, type, isFront }]
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null); // null = use facingMode
+  const [error, setError] = useState(null);
+  const [flashMode, setFlashMode] = useState('off'); // 'off' | 'on' | 'auto'
+  const [focusPoint, setFocusPoint] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [timerDelay, setTimerDelay] = useState(0); // 0 | 3 | 10
+  const [timerCount, setTimerCount] = useState(null);
+
+  // Derived: most recent photo URL for thumbnail
+  const capturedPhoto = photos[0]?.url ?? null;
+
+  // Keep ref mirrors in sync with state
+  useEffect(() => { facingModeRef.current = facingMode; }, [facingMode]);
+  useEffect(() => { flashModeRef.current = flashMode; }, [flashMode]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { timerDelayRef.current = timerDelay; }, [timerDelay]);
+
+  // Keep settings refs in sync with incoming props
+  useEffect(() => { filterRef.current            = filter;            }, [filter]);
+  useEffect(() => { photoQualityRef.current       = photoQuality;      }, [photoQuality]);
+  useEffect(() => { saveFormatRef.current         = saveFormat;        }, [saveFormat]);
+  useEffect(() => { videoResolutionRef.current    = videoResolution;   }, [videoResolution]);
+  useEffect(() => { filterOverrideCSSRef.current  = filterOverrideCSS; }, [filterOverrideCSS]);
+  useEffect(() => { multiFrameCountRef.current    = multiFrameCount;   }, [multiFrameCount]);
+
+  // Initialize internal fallback canvas once
+  useEffect(() => {
+    canvasRef.current = document.createElement('canvas');
+  }, []);
+
+  // Load persisted photos from IndexedDB on mount
+  useEffect(() => {
+    idbLoadPhotos()
+      .then((records) => {
+        const loaded = records.map((r) => {
+          const url = URL.createObjectURL(r.blob);
+          blobUrlsRef.current.push(url);
+          return { id: r.id, url };
+        });
+        setPhotos(loaded);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Cleanup all blob URLs and resources on unmount
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, []);
+
+  // Detect cameras — called initially and again after permission is granted
+  const detectCameras = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    const videos = devices.filter((d) => d.kind === 'videoinput');
+    setHasMultipleCameras(videos.length > 1);
+
+    // Only update cameraList when labels are available (post-permission)
+    if (videos.some((d) => d.label)) {
+      const list = videos.map((d, i) => ({
+        deviceId: d.deviceId,
+        label:    d.label,
+        ...parseCameraLabel(d.label, i),
+      }));
+      setCameraList(list);
+    }
+  }, []);
+
+  useEffect(() => { detectCameras(); }, [detectCameras]);
+
+  // Start or restart the camera stream
+  const startCamera = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('API de câmera não suportada neste navegador.');
+      }
+
+      const res = RES_MAP[videoResolutionRef.current] || RES_MAP['1080p'];
+      // Use specific deviceId when the user picked a lens; otherwise use facingMode
+      const videoConstraints = selectedDeviceId
+        ? { deviceId: { exact: selectedDeviceId }, ...res }
+        : { facingMode, ...res };
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+
+      // Re-detect cameras now that permission is granted (labels are available)
+      await detectCameras();
+
+      setError(null);
+    } catch (err) {
+      const messages = {
+        NotAllowedError: 'Permissão para câmera negada. Permita o acesso nas configurações do navegador.',
+        NotFoundError: 'Nenhuma câmera encontrada neste dispositivo.',
+        NotReadableError: 'A câmera está em uso por outro aplicativo.',
+        OverconstrainedError: 'Configuração de câmera não suportada.',
+      };
+      setError(messages[err.name] || err.message || 'Erro ao acessar a câmera.');
+    } finally {
+      setIsLoading(false);
+      setIsSwitching(false); // end switch animation
+    }
+  }, [facingMode, selectedDeviceId, detectCameras]);
+
+  useEffect(() => {
+    startCamera();
+  }, [startCamera]);
+
+  // ── Torch (hardware LED flash) ──────────────────────────────────────────────
+  const applyTorch = useCallback(async (on) => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities?.();
+      if (caps?.torch) await track.applyConstraints({ advanced: [{ torch: on }] });
+    } catch (_) {}
+  }, []);
+
+  // ── Native zoom ─────────────────────────────────────────────────────────────
+  const applyNativeZoom = useCallback((zoomValue) => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities?.();
+      if (caps?.zoom) {
+        const { min, max } = caps.zoom;
+        const mapped = min + ((zoomValue - 1) / 4) * (max - min);
+        track.applyConstraints({ advanced: [{ zoom: Math.max(min, Math.min(max, mapped)) }] });
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleZoomChange = useCallback(
+    (newZoom) => {
+      const clamped = Math.max(0.5, Math.min(8, newZoom));
+      setZoom(clamped);
+      zoomRef.current = clamped;
+      applyNativeZoom(clamped);
+    },
+    [applyNativeZoom]
+  );
+
+  // ── Photo capture ────────────────────────────────────────────────────────────
+  // Inner async function — reads state via refs to avoid stale closures
+  const doCapture = useCallback(async () => {
+    if (!videoRef.current) return;
+    isCapturingRef.current = true;
+    setIsCapturing(true);
+
+    if (flashModeRef.current === 'on') await applyTorch(true);
+
+    try {
+      const video = videoRef.current;
+      const w = video.videoWidth || 1280;
+      const h = video.videoHeight || 720;
+      let blob;
+
+      const mime       = MIME_MAP[saveFormatRef.current]      || 'image/jpeg';
+      const quality    = QUALITY_MAP[photoQualityRef.current]  ?? 0.92;
+      // Mode filter overrides settings filter
+      const cssFilter  = filterOverrideCSSRef.current || FILTER_CSS[filterRef.current] || '';
+      const frames     = multiFrameCountRef.current;
+
+      if (frames > 1) {
+        // ── Night mode: multi-frame pixel-averaging (noise reduction) ──
+        blob = await stackFrames(
+          video, w, h, cssFilter, facingModeRef.current, frames, mime, quality
+        );
+      } else if (typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap === 'function') {
+        // Off-thread rendering — doesn't block main thread for large frames
+        const bitmap = await createImageBitmap(video);
+        const offscreen = new OffscreenCanvas(w, h);
+        const ctx = offscreen.getContext('2d');
+        ctx.save();
+        if (facingModeRef.current === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
+        if (cssFilter) ctx.filter = cssFilter;
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        ctx.restore();
+        bitmap.close();
+        blob = await offscreen.convertToBlob(
+          mime === 'image/png' ? { type: mime } : { type: mime, quality }
+        );
+      } else {
+        // Fallback: synchronous canvas on main thread
+        const canvas = canvasRef.current;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        if (facingModeRef.current === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
+        if (cssFilter) ctx.filter = cssFilter;
+        ctx.drawImage(video, 0, 0, w, h);
+        ctx.restore();
+        blob = await new Promise((res) =>
+          mime === 'image/png' ? canvas.toBlob(res, mime) : canvas.toBlob(res, mime, quality)
+        );
+      }
+
+      // Add photo to UI immediately with a provisional ID — don't block on IDB
+      const url = URL.createObjectURL(blob);
+      blobUrlsRef.current.push(url);
+      const provisionalId = Date.now();
+      setPhotos((prev) => [{ id: provisionalId, url }, ...prev]);
+
+      // Persist to IndexedDB in the background (doesn't block capture unlock)
+      idbSavePhoto(blob)
+        .then((savedId) => {
+          // Swap provisional ID for the real DB ID (needed for correct delete later)
+          setPhotos((prev) =>
+            prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
+          );
+        })
+        .catch(() => {}); // keep provisional ID on failure
+    } catch (err) {
+      console.error('Erro ao capturar foto:', err);
+    } finally {
+      if (flashModeRef.current === 'on') await applyTorch(false);
+      setIsFlashing(true);
+      setTimeout(() => {
+        setIsFlashing(false);
+        isCapturingRef.current = false;
+        setIsCapturing(false);
+      }, 350);
+    }
+  }, [applyTorch]);
+
+  // Cancel active timer countdown
+  const cancelTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    timerRunningRef.current = false;
+    setTimerCount(null);
+  }, []);
+
+  // Public capture — handles timer delay then calls doCapture
+  const capturePhoto = useCallback(() => {
+    if (isCapturingRef.current || timerRunningRef.current) return;
+    const delay = timerDelayRef.current;
+    if (delay > 0) {
+      timerRunningRef.current = true;
+      let remaining = delay;
+      setTimerCount(remaining);
+      timerIntervalRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+          timerRunningRef.current = false;
+          setTimerCount(null);
+          doCapture();
+        } else {
+          setTimerCount(remaining);
+        }
+      }, 1000);
+    } else {
+      doCapture();
+    }
+  }, [doCapture]);
+
+  // ── Camera switch ────────────────────────────────────────────────────────────
+  const switchCamera = useCallback(() => {
+    setIsSwitching(true);
+    setSelectedDeviceId(null); // reset to facingMode default
+    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+    setZoom(1);
+    zoomRef.current = 1;
+  }, []);
+
+  // ── Lens selection (pick a specific physical camera) ──────────────────────────
+  const selectCamera = useCallback((deviceId) => {
+    setIsSwitching(true);
+    setSelectedDeviceId(deviceId);
+    setZoom(1);
+    zoomRef.current = 1;
+  }, []);
+
+  // ── Flash toggle ─────────────────────────────────────────────────────────────
+  const toggleFlashMode = useCallback(() => {
+    const cycle = ['off', 'on', 'auto'];
+    setFlashMode((prev) => {
+      const next = cycle[(cycle.indexOf(prev) + 1) % cycle.length];
+      flashModeRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // ── Timer toggle ─────────────────────────────────────────────────────────────
+  const toggleTimerDelay = useCallback(() => {
+    setTimerDelay((prev) => {
+      const next = prev === 0 ? 3 : prev === 3 ? 10 : 0;
+      timerDelayRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // ── Delete photo ─────────────────────────────────────────────────────────────
+  const deletePhoto = useCallback(async (id) => {
+    setPhotos((prev) => {
+      const photo = prev.find((p) => p.id === id);
+      if (photo) {
+        URL.revokeObjectURL(photo.url);
+        blobUrlsRef.current = blobUrlsRef.current.filter((u) => u !== photo.url);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
+    await idbDeletePhoto(id).catch(() => {});
+  }, []);
+
+  // ── Video recording ──────────────────────────────────────────────────────────
+  const startRecording = useCallback(() => {
+    if (!streamRef.current || isRecordingRef.current || typeof MediaRecorder === 'undefined') return;
+
+    const mimeType =
+      ['video/webm;codecs=vp9', 'video/webm', 'video/mp4'].find((t) =>
+        MediaRecorder.isTypeSupported(t)
+      ) || '';
+
+    let recorder;
+    try {
+      recorder = mimeType ? new MediaRecorder(streamRef.current, { mimeType }) : new MediaRecorder(streamRef.current);
+    } catch (_) {
+      recorder = new MediaRecorder(streamRef.current);
+    }
+
+    mediaRecorderRef.current = recorder;
+    recordedChunksRef.current = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data?.size > 0) recordedChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const chunks = recordedChunksRef.current;
+      if (chunks.length > 0) {
+        const finalMime = recorder.mimeType || 'video/webm';
+        const blob = new Blob(chunks, { type: finalMime });
+        const url = URL.createObjectURL(blob);
+        const ext = finalMime.includes('mp4') ? 'mp4' : 'webm';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+      recordedChunksRef.current = [];
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      setRecordingTime(0);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    };
+
+    recorder.start(100);
+    isRecordingRef.current = true;
+    setIsRecording(true);
+
+    let elapsed = 0;
+    recordingTimerRef.current = setInterval(() => {
+      elapsed += 1;
+      setRecordingTime(elapsed);
+    }, 1000);
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecordingRef.current) {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  // ── Tap-to-focus ─────────────────────────────────────────────────────────────
+  const handleFocusTap = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    setFocusPoint({ x, y, id: Date.now() });
+    setTimeout(() => setFocusPoint(null), 1800);
+  }, []);
+
+  // ── Pinch-to-zoom ─────────────────────────────────────────────────────────────
+  // Uses zoomRef instead of zoom state → no stale closure, no recreating on every zoom change
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartDistRef.current = Math.hypot(dx, dy);
+      pinchStartZoomRef.current = zoomRef.current;
+    }
+  }, []); // ✅ no deps
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (e.touches.length === 2 && pinchStartDistRef.current) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const newZoom = Math.max(
+          0.5,
+          Math.min(8, (pinchStartZoomRef.current || 1) * (Math.hypot(dx, dy) / pinchStartDistRef.current))
+        );
+        setZoom(newZoom);
+        zoomRef.current = newZoom;
+        applyNativeZoom(newZoom);
+      }
+    },
+    [applyNativeZoom]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    pinchStartDistRef.current = null;
+    pinchStartZoomRef.current = null;
+  }, []);
+
+  return {
+    videoRef,
+    facingMode,
+    capturedPhoto,
+    photos,
+    zoom,
+    isFlashing,
+    isCapturing,
+    isRecording,
+    recordingTime,
+    hasMultipleCameras,
+    error,
+    flashMode,
+    focusPoint,
+    isLoading,
+    isSwitching,
+    timerDelay,
+    timerCount,
+    switchCamera,
+    selectCamera,
+    cameraList,
+    selectedDeviceId,
+    capturePhoto,
+    cancelTimer,
+    startRecording,
+    stopRecording,
+    toggleFlashMode,
+    toggleTimerDelay,
+    deletePhoto,
+    handleZoomChange,
+    handleFocusTap,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  };
+}

@@ -1,0 +1,169 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header (grid view) ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px;
+  padding-top: calc(14px + var(--safe-top));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+.iconBtn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  transition: background 0.15s;
+}
+
+.iconBtn:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.deleteBtn {
+  color: #ff453a;
+}
+
+/* ── Photo grid ── */
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--safe-bottom);
+}
+
+.gridItem {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #111;
+  display: block;
+}
+
+.gridItem:active {
+  opacity: 0.75;
+}
+
+.gridThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Empty state ── */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.emptyText {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--font-sans);
+}
+
+/* ── Full-screen viewer ── */
+.viewer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px;
+  padding-top: calc(14px + var(--safe-top));
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+
+.viewerCounter {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-sans);
+}
+
+.viewerActions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.imageWrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.fullImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Navigation arrows */
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 36px;
+  line-height: 1;
+  width: 44px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  z-index: 5;
+  transition: background 0.15s;
+}
+
+.navBtn:active {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.navPrev { left: 8px; }
+.navNext { right: 8px; }
