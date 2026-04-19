@@ -67,9 +67,47 @@ function FilterStrip({ value, onChange }) {
 
 /* ─── Main Settings component ─────────────────────────────── */
 
+const CHANGELOG = [
+  {
+    version: 'v1.0.2',
+    date: 'Abril 2026',
+    changes: [
+      'Modal de confirmação para exclusão individual de foto',
+      'Painel de edição: rotação ±90° e controle de qualidade',
+      'Painel de propriedades com dados EXIF e GPS',
+      'Menu de contexto (⋮) e toque longo na galeria',
+      'Favoritos com persistência no localStorage',
+    ],
+  },
+  {
+    version: 'v1.0.1',
+    date: 'Março 2026',
+    changes: [
+      'Foco real via applyConstraints (tap-to-focus)',
+      'Slider de exposição após toque no visor',
+      'Galeria: multi-seleção e download em ZIP',
+      'Suporte offline com Workbox (skipWaiting + clientsClaim)',
+      'Configurações: reset de padrões e forçar atualização',
+    ],
+  },
+  {
+    version: 'v1.0.0',
+    date: 'Fevereiro 2026',
+    changes: [
+      'Lançamento inicial do MIUI Camera React',
+      'Modos: Foto, Vídeo, Retrato, Pro, Noturno, Panorama',
+      'Timer (0 / 3 / 5 / 10 s), grade e tela cheia',
+      'Seleção de câmera traseira e frontal',
+      'PWA instalável com ícones gerados automaticamente',
+      'Deploy contínuo via GitHub Actions',
+    ],
+  },
+];
+
 export default function Settings({ settings, onUpdate, onReset, onClose }) {
   const sheetRef = useRef(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
 
   const handleReset = () => {
     if (!confirmReset) { setConfirmReset(true); return; }
@@ -226,8 +264,55 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
             </button>
           </div>
 
+          {/* ── SOBRE ─────────────────────── */}
+          <div className={styles.aboutSection}>
+            <span className={styles.aboutVersion}>MIUI Camera v1.0.2</span>
+            <span className={styles.aboutCredits}>Desenvolvido por Daniel Neitzel Vieira · 2026</span>
+            <a
+              className={styles.aboutLink}
+              href="https://github.com/DanVNeitzel/MIUI-Camera-React"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              github.com/DanVNeitzel/MIUI-Camera-React ↗
+            </a>
+            <button
+              className={styles.changelogBtn}
+              onClick={() => setShowChangelog(true)}
+            >
+              📋 Changelog
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
+
+    {/* ── Changelog modal ─────────────────────── */}
+    {showChangelog && (
+      <div className={styles.changelogOverlay} onClick={() => setShowChangelog(false)}>
+        <div className={styles.changelogSheet} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.changelogHeader}>
+            <span className={styles.changelogTitle}>Changelog</span>
+            <button className={styles.closeBtn} onClick={() => setShowChangelog(false)} aria-label="Fechar">✕</button>
+          </div>
+          <div className={styles.changelogList}>
+            {CHANGELOG.map((entry) => (
+              <div key={entry.version} className={styles.changelogEntry}>
+                <div className={styles.changelogEntryHeader}>
+                  <span className={styles.changelogVersion}>{entry.version}</span>
+                  <span className={styles.changelogDate}>{entry.date}</span>
+                </div>
+                <ul className={styles.changelogChanges}>
+                  {entry.changes.map((c, i) => (
+                    <li key={i} className={styles.changelogItem}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
   );
 }

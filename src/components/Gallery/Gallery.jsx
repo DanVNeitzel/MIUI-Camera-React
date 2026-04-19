@@ -344,11 +344,12 @@ export default function Gallery({ photos, onClose, onDelete }) {
     catch { return new Set(); }
   });
 
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [showDeleteModal,   setShowDeleteModal]   = useState(false);
-  const [showContextMenu,   setShowContextMenu]   = useState(false);
-  const [showProperties,    setShowProperties]    = useState(false);
-  const [showEdit,          setShowEdit]          = useState(false);
+  const [showDownloadModal,    setShowDownloadModal]    = useState(false);
+  const [showDeleteModal,      setShowDeleteModal]      = useState(false);
+  const [showDeleteSingleModal,setShowDeleteSingleModal] = useState(false);
+  const [showContextMenu,      setShowContextMenu]      = useState(false);
+  const [showProperties,       setShowProperties]       = useState(false);
+  const [showEdit,             setShowEdit]             = useState(false);
   const [isZipping,         setIsZipping]         = useState(false);
   const [contextPhoto,      setContextPhoto]      = useState(null);
   const [contextIndex,      setContextIndex]      = useState(null);
@@ -552,7 +553,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
           isFavorite={favorites.has(contextPhoto.id)}
           onClose={() => setShowContextMenu(false)}
           onDownload={() => downloadBlob(displayUrl(contextPhoto), photoFilename(contextPhoto, (contextIndex || 0) + 1))}
-          onDelete={() => handleDelete(contextPhoto.id)}
+          onDelete={() => setShowDeleteSingleModal(true)}
           onProperties={() => setShowProperties(true)}
           onEdit={() => setShowEdit(true)}
           onToggleFavorite={toggleFavorite}
@@ -599,6 +600,19 @@ export default function Gallery({ photos, onClose, onDelete }) {
             <div className={styles.modalActionsRow}>
               <button className={styles.modalCancelInline} onClick={() => setShowDeleteModal(false)}>Cancelar</button>
               <button className={styles.modalDeleteConfirm} onClick={handleBatchDelete}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteSingleModal && contextPhoto && (
+        <div className={styles.modalBackdrop} onClick={() => setShowDeleteSingleModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <p className={styles.modalTitle}>Excluir foto?</p>
+            <p className={styles.modalSubtitle}>Esta ação não pode ser desfeita.</p>
+            <div className={styles.modalActionsRow}>
+              <button className={styles.modalCancelInline} onClick={() => setShowDeleteSingleModal(false)}>Cancelar</button>
+              <button className={styles.modalDeleteConfirm} onClick={async () => { setShowDeleteSingleModal(false); await handleDelete(contextPhoto.id); }}>Excluir</button>
             </div>
           </div>
         </div>
