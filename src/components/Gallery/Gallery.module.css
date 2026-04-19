@@ -66,10 +66,20 @@
   overflow: hidden;
   background: #111;
   display: block;
+  position: relative;
 }
 
 .gridItem:active {
   opacity: 0.75;
+}
+
+.gridItemSelected .gridThumb {
+  opacity: 0.6;
+}
+
+.gridItemSelected {
+  outline: 3px solid #ffd200;
+  outline-offset: -3px;
 }
 
 .gridThumb {
@@ -167,3 +177,75 @@
 
 .navPrev { left: 8px; }
 .navNext { right: 8px; }
+
+/* ── Selection mode ── */
+.checkCircle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.checkCircleActive {
+  background: #ffd200;
+  border-color: #ffd200;
+  color: #000;
+}
+
+.selectAllBtn {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffd200;
+  font-family: var(--font-sans);
+  padding: 6px 10px;
+}
+
+.selectionCount {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-sans);
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ── Batch action bar ── */
+.batchBar {
+  position: sticky;
+  bottom: 0;
+  background: rgba(20, 20, 20, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 10px;
+}
+
+.batchBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  border-radius: 12px;
+  background: #ffd200;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  transition: opacity 0.15s;
+}
+
+.batchBtn:active {
+  opacity: 0.75;
+}
