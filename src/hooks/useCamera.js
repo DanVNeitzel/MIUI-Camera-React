@@ -150,7 +150,7 @@ export function useCamera({
   const [focusPoint, setFocusPoint] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
-  const [timerDelay, setTimerDelay] = useState(0); // 0 | 3 | 10
+  const [timerDelay, setTimerDelay] = useState(0); // 0 | 3 | 5 | 10
   const [timerCount, setTimerCount] = useState(null);
 
   // Derived: most recent photo URL for thumbnail
@@ -452,7 +452,7 @@ export function useCamera({
   // ── Timer toggle ─────────────────────────────────────────────────────────────
   const toggleTimerDelay = useCallback(() => {
     setTimerDelay((prev) => {
-      const next = prev === 0 ? 3 : prev === 3 ? 10 : 0;
+      const next = prev === 0 ? 3 : prev === 3 ? 5 : prev === 5 ? 10 : 0;
       timerDelayRef.current = next;
       return next;
     });
