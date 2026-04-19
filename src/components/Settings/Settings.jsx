@@ -112,6 +112,20 @@ export default function Settings({ settings, onUpdate, onClose }) {
         {/* Scrollable content */}
         <div className={styles.content}>
 
+          {/* ── CÂMERA ──────────────────────── */}
+          <SectionTitle>CÂMERA</SectionTitle>
+
+          <SettingRow label="Câmera padrão">
+            <ChipGroup
+              options={[
+                { value: 'environment', label: 'Traseira' },
+                { value: 'user',        label: 'Frontal'  },
+              ]}
+              value={settings.defaultCamera}
+              onChange={(v) => onUpdate('defaultCamera', v)}
+            />
+          </SettingRow>
+
           {/* ── FOTO ────────────────────────── */}
           <SectionTitle>FOTO</SectionTitle>
 

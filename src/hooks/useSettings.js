@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 const STORAGE_KEY = 'miui-camera-settings';
 
 export const SETTINGS_DEFAULTS = {
-  photoQuality:    'high',   // 'low' | 'medium' | 'high' | 'max'
-  saveFormat:      'jpeg',   // 'jpeg' | 'png' | 'webp'
-  videoResolution: '1080p',  // '720p' | '1080p' | '4k'
-  gridType:        'none',   // 'none' | 'thirds' | 'square' | 'both'
-  filter:          'none',   // see filterMap.js
+  photoQuality:    'high',        // 'low' | 'medium' | 'high' | 'max'
+  saveFormat:      'jpeg',        // 'jpeg' | 'png' | 'webp'
+  videoResolution: '1080p',       // '720p' | '1080p' | '4k'
+  gridType:        'none',        // 'none' | 'thirds' | 'square' | 'both'
+  filter:          'none',        // see filterMap.js
+  defaultCamera:   'environment', // 'environment' | 'user'
 };
 
 export function useSettings() {

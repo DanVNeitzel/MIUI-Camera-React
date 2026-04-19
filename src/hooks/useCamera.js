@@ -99,6 +99,7 @@ export function useCamera({
   filter             = 'none',
   filterOverrideCSS  = '',   // raw CSS string — overrides ID-based filter (used by modes)
   multiFrameCount    = 1,    // >1 = frame-stacking (night mode noise reduction)
+  defaultCamera      = 'environment', // 'environment' | 'user'
 } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -122,7 +123,7 @@ export function useCamera({
   // Ref mirrors — allow callbacks to read latest value without stale closures
   const isCapturingRef = useRef(false);
   const isRecordingRef = useRef(false);
-  const facingModeRef = useRef('environment');
+  const facingModeRef = useRef(defaultCamera);
   const flashModeRef = useRef('off');
   const zoomRef = useRef(1);
 
@@ -135,7 +136,7 @@ export function useCamera({
   const multiFrameCountRef     = useRef(multiFrameCount);
 
   // State
-  const [facingMode, setFacingMode] = useState('environment');
+  const [facingMode, setFacingMode] = useState(defaultCamera);
   const [photos, setPhotos] = useState([]); // [{ id: number, url: string }]
   const [zoom, setZoom] = useState(1);
   const [isFlashing, setIsFlashing] = useState(false);
