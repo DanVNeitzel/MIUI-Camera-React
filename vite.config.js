@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'MIUI Camera',
-        short_name: 'Camera',
+        name: 'Camera MIUI',
+        short_name: 'Camera MIUI',
         description: 'Câmera estilo MIUI para Android',
         theme_color: '#000000',
         background_color: '#000000',
