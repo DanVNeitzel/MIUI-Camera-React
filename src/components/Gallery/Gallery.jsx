@@ -441,6 +441,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
     },
     onPointerUp:    () => clearTimeout(longPressTimer.current),
     onPointerLeave: () => clearTimeout(longPressTimer.current),
+    onContextMenu:  (e) => e.preventDefault(),
   });
 
   return (

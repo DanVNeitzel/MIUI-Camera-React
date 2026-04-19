@@ -25,6 +25,8 @@ export default function App() {
   // PRO mode manual controls
   const [proEV, setProEV] = useState(0);
   const [proWB, setProWB] = useState(5500);
+  const [proISO, setProISO] = useState(0);
+  const [proShutter, setProShutter] = useState(0);
 
   const { settings, updateSetting, resetSettings } = useSettings();
 
@@ -116,6 +118,7 @@ export default function App() {
     exposureCompensation,
     exposureRange,
     setExposure,
+    applyProSettings,
   } = useCamera({
     ...settings,
     filterOverrideCSS: modeFilterCSS,
@@ -201,8 +204,12 @@ export default function App() {
             <ProControls
               ev={proEV}
               wb={proWB}
+              iso={proISO}
+              shutter={proShutter}
               onEvChange={setProEV}
               onWbChange={setProWB}
+              onIsoChange={(v) => { setProISO(v); applyProSettings(v, proShutter); }}
+              onShutterChange={(v) => { setProShutter(v); applyProSettings(proISO, v); }}
             />
           )}
 

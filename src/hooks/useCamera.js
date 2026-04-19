@@ -561,14 +561,14 @@ export function useCamera({
       if (caps.pointOfInterest) {
         adv.pointOfInterest = { x: x / 100, y: y / 100 };
       }
-      if (caps.focusMode?.includes('manual')) {
-        adv.focusMode = 'manual';
-      } else if (caps.focusMode?.includes('single-shot')) {
+      if (caps.focusMode?.includes('single-shot')) {
         adv.focusMode = 'single-shot';
+      } else if (caps.focusMode?.includes('manual')) {
+        adv.focusMode = 'manual';
       }
-      if (caps.exposureMode?.includes('manual')) {
-        adv.exposureMode = 'manual';
-      } else if (caps.exposureMode?.includes('continuous')) {
+      // Always keep exposure in continuous during tap-to-focus;
+      // manual exposure without exposureTime causes black frame.
+      if (caps.exposureMode?.includes('continuous')) {
         adv.exposureMode = 'continuous';
       }
       if (Object.keys(adv).length > 0) {
@@ -590,7 +590,24 @@ export function useCamera({
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
     try {
-      await track.applyConstraints({ advanced: [{ exposureCompensation: value }] });
+      const caps = track.getCapabilities();
+      const adv = { exposureCompensation: value };
+      if (caps.exposureMode?.includes('continuous')) adv.exposureMode = 'continuous';
+      await track.applyConstraints({ advanced: [adv] });
+    } catch (_) {}
+  }, []);
+
+  // ── Pro mode: ISO + shutter speed ───────────────────────────────────────────
+  const applyProSettings = useCallback(async (iso, exposureTime) => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const adv = {};
+      const isManual = iso > 0 || exposureTime > 0;
+      adv.exposureMode = isManual ? 'manual' : 'continuous';
+      if (iso > 0) adv.iso = iso;
+      if (exposureTime > 0) adv.exposureTime = exposureTime;
+      await track.applyConstraints({ advanced: [adv] });
     } catch (_) {}
   }, []);
 
@@ -648,6 +665,7 @@ export function useCamera({
     exposureCompensation,
     exposureRange,
     setExposure,
+    applyProSettings,
     switchCamera,
     selectCamera,
     cameraList,

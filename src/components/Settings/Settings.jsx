@@ -69,6 +69,18 @@ function FilterStrip({ value, onChange }) {
 
 const CHANGELOG = [
   {
+    version: 'v1.0.3',
+    date: 'Abril 2026',
+    changes: [
+      'Modo Pro: controles reais de ISO e velocidade de obturador',
+      'Tap-to-focus corrigido: tela não escurece mais após o foco',
+      'Slider de brilho pós-foco funcionando corretamente',
+      'Menu nativo do navegador bloqueado no toque longo da galeria',
+      'Configurações: seção Sobre com versão, créditos e link do GitHub',
+      'Configurações: botão Changelog com histórico de versões',
+    ],
+  },
+  {
     version: 'v1.0.2',
     date: 'Abril 2026',
     changes: [
@@ -267,7 +279,7 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
 
           {/* ── SOBRE ─────────────────────── */}
           <div className={styles.aboutSection}>
-            <span className={styles.aboutVersion}>MIUI Camera v1.0.2</span>
+            <span className={styles.aboutVersion}>MIUI Camera v1.0.3</span>
             <span className={styles.aboutCredits}>Desenvolvido por Daniel Neitzel Vieira · 2026</span>
             <a
               className={styles.aboutLink}

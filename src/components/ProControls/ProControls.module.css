@@ -1,34 +1,78 @@
 .panel {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-direction: column;
   gap: 0;
-  padding: 8px 16px;
   background: rgba(0, 0, 0, 0.72);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.panel::-webkit-scrollbar { display: none; }
 
-/* ── Each parameter row ──────────────────────────────── */
-.row {
+/* ── Slider rows (EV, WB) ───────────────────────────── */
+.sliderRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  min-width: 0;
+  gap: 10px;
+  padding: 7px 16px;
 }
 
-.divider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 12px;
+.rowDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ── Chip rows (ISO, SS) ────────────────────────────── */
+.chipRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+}
+
+.chipLabel {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  line-height: 1;
+  min-width: 20px;
   flex-shrink: 0;
+}
+
+.chipList {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0;
+  flex: 1;
+}
+.chipList::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid transparent;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.chip:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.chipActive {
+  background: rgba(255, 106, 0, 0.18);
+  color: #ff6a00;
+  border-color: rgba(255, 106, 0, 0.45);
 }
 
 /* ── Label + value pair ──────────────────────────────── */
