@@ -230,7 +230,7 @@
   gap: 10px;
 }
 
-.batchBtn {
+.batchBtnDownload {
   flex: 1;
   display: flex;
   align-items: center;
@@ -240,12 +240,435 @@
   border-radius: 12px;
   background: #ffd200;
   color: #000;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   font-family: var(--font-sans);
   transition: opacity 0.15s;
 }
 
-.batchBtn:active {
+.batchBtnDownload:active,
+.batchBtnDownload:disabled {
+  opacity: 0.65;
+}
+
+.batchBtnDelete {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 69, 58, 0.18);
+  color: #ff453a;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid rgba(255, 69, 58, 0.3);
+  transition: opacity 0.15s;
+}
+
+.batchBtnDelete:active {
+  opacity: 0.7;
+}
+
+/* ── Modals ── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  width: 100%;
+  background: #1c1c1e;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px;
+  padding-bottom: calc(24px + var(--safe-bottom));
+  animation: slideUp 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-sans);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.modalSubtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-sans);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Download option buttons (icon + label + sub) */
+.modalActions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.modalBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+}
+
+.modalBtn:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.modalBtnSub {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.modalCancel {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+}
+
+.modalCancel:active {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+/* Delete confirmation row */
+.modalActionsRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.modalCancelInline {
+  flex: 1;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+}
+
+.modalCancelInline:active {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.modalDeleteConfirm {
+  flex: 1;
+  height: 48px;
+  border-radius: 14px;
+  background: #ff453a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  transition: opacity 0.15s;
+}
+
+.modalDeleteConfirm:active {
   opacity: 0.75;
+}
+
+/* ── Context menu ── */
+.contextMenu {
+  width: 100%;
+  background: #1c1c1e;
+  border-radius: 20px 20px 0 0;
+  padding: 8px 0 0;
+  padding-bottom: calc(8px + var(--safe-bottom));
+  animation: slideUp 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ctxBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 20px;
+  color: #fff;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  transition: background 0.1s;
+}
+
+.ctxBtn:active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ctxBtnDelete {
+  color: #ff453a;
+}
+
+.ctxDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+
+.ctxCancel {
+  width: calc(100% - 32px);
+  margin: 8px 16px 12px;
+  height: 50px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.ctxCancel:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Properties panel ── */
+.propsPanel {
+  width: 100%;
+  max-height: 80vh;
+  background: #1c1c1e;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.propsPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.propsList {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 0;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+
+.propsLoading {
+  text-align: center;
+  padding: 32px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  font-family: var(--font-sans);
+}
+
+.propsRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.propsLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-sans);
+  flex-shrink: 0;
+  min-width: 110px;
+}
+
+.propsValue {
+  font-size: 13px;
+  color: #fff;
+  font-family: var(--font-sans);
+  text-align: right;
+  word-break: break-word;
+}
+
+.propsMapLink {
+  display: block;
+  margin: 14px 20px 0;
+  padding: 13px;
+  background: rgba(10, 132, 255, 0.15);
+  border: 1px solid rgba(10, 132, 255, 0.35);
+  border-radius: 12px;
+  color: #0a84ff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  text-align: center;
+  text-decoration: none;
+}
+
+/* ── Edit panel ── */
+.editPanel {
+  width: 100%;
+  max-height: 90vh;
+  background: #1c1c1e;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+
+.editPreviewWrap {
+  flex: 1;
+  min-height: 180px;
+  max-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  overflow: hidden;
+}
+
+.editPreview {
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.editSection {
+  padding: 14px 20px 4px;
+}
+
+.editSectionTitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-sans);
+  margin-bottom: 10px;
+}
+
+.editRotateRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.editActionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  transition: background 0.15s;
+}
+
+.editActionBtn:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.editRotValue {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffd200;
+  font-family: var(--font-sans);
+  min-width: 50px;
+  text-align: center;
+}
+
+.editQualitySlider {
+  width: 100%;
+  accent-color: #ffd200;
+}
+
+.editActions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.modalSaveBtn {
+  flex: 1;
+  height: 48px;
+  border-radius: 14px;
+  background: #ffd200;
+  color: #000;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  transition: opacity 0.15s;
+}
+
+.modalSaveBtn:disabled {
+  opacity: 0.6;
+}
+
+/* ── Grid item more button ── */
+.gridMoreBtn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: auto;
+}
+
+.gridItem:hover .gridMoreBtn,
+.gridItem:focus-within .gridMoreBtn {
+  opacity: 1;
+}
+
+/* ── Favorite badge ── */
+.favBadge {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  font-size: 14px;
+  line-height: 1;
+  color: #ffd200;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  pointer-events: none;
 }

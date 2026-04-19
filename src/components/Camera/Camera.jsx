@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import styles from './Camera.module.css';
 import GridOverlay from '../GridOverlay/GridOverlay';
 
@@ -7,6 +8,9 @@ export default function Camera({
   zoom,
   focusPoint,
   onFocusTap,
+  exposureCompensation,
+  exposureRange,
+  onExposureChange,
   onTouchStart,
   onTouchMove,
   onTouchEnd,
@@ -79,6 +83,28 @@ export default function Camera({
           className={styles.focusRing}
           style={{ left: `${focusPoint.x}%`, top: `${focusPoint.y}%` }}
         />
+      )}
+
+      {focusPoint && exposureRange && (
+        <div
+          className={styles.exposureControl}
+          style={{ left: `${Math.min(focusPoint.x + 10, 85)}%`, top: `${focusPoint.y}%` }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className={styles.exposureSun}>☀</span>
+          <input
+            type="range"
+            className={styles.exposureSlider}
+            min={exposureRange.min}
+            max={exposureRange.max}
+            step={exposureRange.step || 0.1}
+            value={exposureCompensation}
+            onChange={(e) => onExposureChange(parseFloat(e.target.value))}
+            aria-label="Brilho"
+          />
+          <span className={styles.exposureSunSmall}>☀</span>
+        </div>
       )}
 
       {/* Camera switch fade overlay */}

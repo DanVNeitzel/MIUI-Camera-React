@@ -120,6 +120,9 @@ export function useCamera({
   const timerRunningRef = useRef(false);
   const timerDelayRef = useRef(0);
 
+  // Focus/exposure timer ref
+  const focusTimerRef = useRef(null);
+
   // Ref mirrors — allow callbacks to read latest value without stale closures
   const isCapturingRef = useRef(false);
   const isRecordingRef = useRef(false);
@@ -153,6 +156,8 @@ export function useCamera({
   const [isSwitching, setIsSwitching] = useState(false);
   const [timerDelay, setTimerDelay] = useState(0); // 0 | 3 | 5 | 10
   const [timerCount, setTimerCount] = useState(null);
+  const [exposureCompensation, setExposureCompensationState] = useState(0);
+  const [exposureRange, setExposureRange] = useState(null); // { min, max, step } | null
 
   // Derived: most recent photo URL for thumbnail
   const capturedPhoto = photos[0]?.url ?? null;
@@ -197,6 +202,7 @@ export function useCamera({
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
     };
   }, []);
 
@@ -536,14 +542,56 @@ export function useCamera({
   }, []);
 
   // ── Tap-to-focus ─────────────────────────────────────────────────────────────
-  const handleFocusTap = useCallback((e) => {
+  const handleFocusTap = useCallback(async (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
+
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
     setFocusPoint({ x, y, id: Date.now() });
-    setTimeout(() => setFocusPoint(null), 1800);
+    focusTimerRef.current = setTimeout(() => setFocusPoint(null), 4500);
+
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities();
+      const adv = {};
+      if (caps.pointOfInterest) {
+        adv.pointOfInterest = { x: x / 100, y: y / 100 };
+      }
+      if (caps.focusMode?.includes('manual')) {
+        adv.focusMode = 'manual';
+      } else if (caps.focusMode?.includes('single-shot')) {
+        adv.focusMode = 'single-shot';
+      }
+      if (caps.exposureMode?.includes('manual')) {
+        adv.exposureMode = 'manual';
+      } else if (caps.exposureMode?.includes('continuous')) {
+        adv.exposureMode = 'continuous';
+      }
+      if (Object.keys(adv).length > 0) {
+        await track.applyConstraints({ advanced: [adv] });
+      }
+      if (caps.exposureCompensation) {
+        setExposureRange(caps.exposureCompensation);
+      }
+    } catch (_) {
+      // Focus/exposure constraints not supported on this device
+    }
+  }, []);
+
+  // ── Exposure compensation ─────────────────────────────────────────────────────
+  const setExposure = useCallback(async (value) => {
+    setExposureCompensationState(value);
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
+    focusTimerRef.current = setTimeout(() => setFocusPoint(null), 3500);
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      await track.applyConstraints({ advanced: [{ exposureCompensation: value }] });
+    } catch (_) {}
   }, []);
 
   // ── Pinch-to-zoom ─────────────────────────────────────────────────────────────
@@ -597,6 +645,9 @@ export function useCamera({
     isSwitching,
     timerDelay,
     timerCount,
+    exposureCompensation,
+    exposureRange,
+    setExposure,
     switchCamera,
     selectCamera,
     cameraList,

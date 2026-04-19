@@ -52,6 +52,19 @@ export default function App() {
     };
   }, []);
 
+  // Offline indicator
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline  = () => setIsOffline(false);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online',  goOnline);
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online',  goOnline);
+    };
+  }, []);
+
   // Derive mode characteristics
   const modeProfile = useMemo(
     () => MODE_PROFILES[activeMode] || MODE_PROFILES.foto,
@@ -100,6 +113,9 @@ export default function App() {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    exposureCompensation,
+    exposureRange,
+    setExposure,
   } = useCamera({
     ...settings,
     filterOverrideCSS: modeFilterCSS,
@@ -121,12 +137,20 @@ export default function App() {
 
   return (
     <div className={styles.app}>
+      {isOffline && (
+        <div className={styles.offlineBanner} role="status" aria-live="polite">
+          Sem conexão — modo offline
+        </div>
+      )}
       <Camera
         videoRef={videoRef}
         facingMode={facingMode}
         zoom={zoom}
         focusPoint={focusPoint}
         onFocusTap={handleFocusTap}
+        exposureCompensation={exposureCompensation}
+        exposureRange={exposureRange}
+        onExposureChange={setExposure}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

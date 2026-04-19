@@ -85,6 +85,68 @@
   z-index: 10;
 }
 
+/* Exposure control — vertical slider next to focus ring */
+.exposureControl {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translate(12px, -50%);
+  z-index: 11;
+  animation: fadeInExposure 0.25s ease;
+}
+
+@keyframes fadeInExposure {
+  from { opacity: 0; transform: translate(12px, -50%) scale(0.9); }
+  to   { opacity: 1; transform: translate(12px, -50%) scale(1); }
+}
+
+.exposureSun {
+  color: rgba(255, 210, 0, 0.95);
+  font-size: 14px;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(0,0,0,0.6);
+}
+
+.exposureSunSmall {
+  color: rgba(255, 210, 0, 0.5);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.exposureSlider {
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 24px;
+  height: 100px;
+  cursor: pointer;
+  background: transparent;
+  touch-action: none;
+}
+
+/* Webkit track */
+.exposureSlider::-webkit-slider-runnable-track {
+  width: 3px;
+  background: rgba(255, 210, 0, 0.35);
+  border-radius: 2px;
+}
+
+/* Webkit thumb */
+.exposureSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 210, 0, 0.95);
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  margin-left: -7.5px;
+}
+
 /* Camera switch overlay */
 .switchOverlay {
   position: absolute;
