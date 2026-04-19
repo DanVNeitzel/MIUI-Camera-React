@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo preto arredondado -->
+  <rect width="512" height="512" rx="110" ry="110" fill="#000000"/>
+
+  <!-- Corpo da câmera -->
+  <rect x="64" y="160" width="384" height="256" rx="40" ry="40" fill="#1a1a1a"/>
+
+  <!-- Saliência do topo (onde fica o visor) -->
+  <rect x="180" y="130" width="152" height="50" rx="20" ry="20" fill="#1a1a1a"/>
+
+  <!-- Flash pequeno -->
+  <circle cx="148" cy="155" r="16" fill="#1a1a1a"/>
+  <circle cx="148" cy="155" r="10" fill="#f5c842" opacity="0.85"/>
+
+  <!-- Lente - anel externo -->
+  <circle cx="256" cy="288" r="100" fill="url(#ringGrad)"/>
+
+  <!-- Lente - anel intermediário -->
+  <circle cx="256" cy="288" r="80" fill="#0a0a0a"/>
+
+  <!-- Lente - gradiente laranja/âmbar -->
+  <circle cx="256" cy="288" r="68" fill="url(#lensGrad)"/>
+
+  <!-- Lente - reflexo interno -->
+  <circle cx="256" cy="288" r="42" fill="url(#innerGrad)"/>
+
+  <!-- Reflexo de luz -->
+  <ellipse cx="232" cy="262" rx="14" ry="9" fill="white" opacity="0.25" transform="rotate(-30 232 262)"/>
+
+  <defs>
+    <radialGradient id="ringGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#3a3a3a"/>
+      <stop offset="100%" stop-color="#111"/>
+    </radialGradient>
+    <radialGradient id="lensGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffb347"/>
+      <stop offset="40%" stop-color="#ff6a00"/>
+      <stop offset="100%" stop-color="#b83200"/>
+    </radialGradient>
+    <radialGradient id="innerGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ff8c42"/>
+      <stop offset="100%" stop-color="#7a1a00"/>
+    </radialGradient>
+  </defs>
+</svg>
