@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FILTERS, FILTER_CSS } from '../../utils/filterMap';
 import styles from './Settings.module.css';
 
@@ -67,8 +67,25 @@ function FilterStrip({ value, onChange }) {
 
 /* ─── Main Settings component ─────────────────────────────── */
 
-export default function Settings({ settings, onUpdate, onClose }) {
+export default function Settings({ settings, onUpdate, onReset, onClose }) {
   const sheetRef = useRef(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const handleReset = () => {
+    if (!confirmReset) { setConfirmReset(true); return; }
+    onReset();
+    setConfirmReset(false);
+  };
+
+  const handleForceUpdate = () => {
+    if ('caches' in window) {
+      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n)))).finally(() => {
+        window.location.reload(true);
+      });
+    } else {
+      window.location.reload(true);
+    }
+  };
 
   // Close on Escape
   useEffect(() => {
@@ -192,6 +209,22 @@ export default function Settings({ settings, onUpdate, onClose }) {
             value={settings.filter}
             onChange={(v) => onUpdate('filter', v)}
           />
+
+          {/* ── SISTEMA ─────────────────────── */}
+          <SectionTitle>SISTEMA</SectionTitle>
+
+          <div className={styles.dangerRow}>
+            <button
+              className={`${styles.dangerBtn} ${confirmReset ? styles.dangerBtnConfirm : ''}`}
+              onClick={handleReset}
+              onBlur={() => setConfirmReset(false)}
+            >
+              {confirmReset ? 'Confirmar reset?' : 'Restaurar padrões'}
+            </button>
+            <button className={styles.updateBtn} onClick={handleForceUpdate}>
+              Forçar atualização
+            </button>
+          </div>
 
         </div>
       </div>

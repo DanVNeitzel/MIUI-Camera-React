@@ -26,7 +26,7 @@ export default function App() {
   const [proEV, setProEV] = useState(0);
   const [proWB, setProWB] = useState(5500);
 
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSetting, resetSettings } = useSettings();
 
   const toggleGridType = useCallback(() => {
     const cycle = { none: 'thirds', thirds: 'square', square: 'both', both: 'none' };
@@ -211,6 +211,7 @@ export default function App() {
         <Settings
           settings={settings}
           onUpdate={updateSetting}
+          onReset={resetSettings}
           onClose={() => setShowSettings(false)}
         />
       )}

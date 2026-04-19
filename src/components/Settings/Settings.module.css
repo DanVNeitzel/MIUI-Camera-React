@@ -198,3 +198,49 @@
   color: var(--color-accent, #ff6a00);
   font-weight: 600;
 }
+
+/* ── System buttons ────────────────────────────────────────────── */
+.dangerRow {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+
+.dangerBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 69, 58, 0.12);
+  color: #ff453a;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid rgba(255, 69, 58, 0.25);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dangerBtn:active {
+  background: rgba(255, 69, 58, 0.22);
+}
+
+.dangerBtnConfirm {
+  background: rgba(255, 69, 58, 0.28);
+  border-color: #ff453a;
+}
+
+.updateBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.15s;
+}
+
+.updateBtn:active {
+  background: rgba(255, 255, 255, 0.15);
+}
