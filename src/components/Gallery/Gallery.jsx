@@ -369,10 +369,11 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
   const handleDelete = useCallback(
     async (id) => {
+      if (favorites.has(id)) return;
       await onDelete(id);
       if (selectedPhoto && selectedPhoto.id === id) setSelectedIndex(null);
     },
-    [onDelete, selectedPhoto]
+    [onDelete, selectedPhoto, favorites]
   );
 
   const handleSaveEdit = useCallback(async (id, newUrl) => {
@@ -423,7 +424,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
   const handleBatchDelete = async () => {
     setShowDeleteModal(false);
-    for (const id of selectedIds) await onDelete(id);
+    for (const id of selectedIds) {
+      if (!favorites.has(id)) await onDelete(id);
+    }
     setSelectedIds(new Set());
     setSelectMode(false);
   };
@@ -593,31 +596,48 @@ export default function Gallery({ photos, onClose, onDelete }) {
         </div>
       )}
 
-      {showDeleteModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowDeleteModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <p className={styles.modalTitle}>Excluir {count} foto{count !== 1 ? 's' : ''}?</p>
-            <p className={styles.modalSubtitle}>Esta ação não pode ser desfeita.</p>
-            <div className={styles.modalActionsRow}>
-              <button className={styles.modalCancelInline} onClick={() => setShowDeleteModal(false)}>Cancelar</button>
-              <button className={styles.modalDeleteConfirm} onClick={handleBatchDelete}>Excluir</button>
+      {showDeleteModal && (() => {
+        const favCount = [...selectedIds].filter((id) => favorites.has(id)).length;
+        const deletable = count - favCount;
+        return (
+          <div className={styles.modalBackdrop} onClick={() => setShowDeleteModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <p className={styles.modalTitle}>Excluir {deletable} foto{deletable !== 1 ? 's' : ''}?</p>
+              <p className={styles.modalSubtitle}>
+                {favCount > 0
+                  ? `${favCount} foto${favCount !== 1 ? 's favoritadas serão ignoradas' : ' favoritada será ignorada'}. Esta ação não pode ser desfeita.`
+                  : 'Esta ação não pode ser desfeita.'}
+              </p>
+              <div className={styles.modalActionsRow}>
+                <button className={styles.modalCancelInline} onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                <button className={styles.modalDeleteConfirm} disabled={deletable === 0} onClick={handleBatchDelete}>Excluir</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {showDeleteSingleModal && contextPhoto && (
-        <div className={styles.modalBackdrop} onClick={() => setShowDeleteSingleModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <p className={styles.modalTitle}>Excluir foto?</p>
-            <p className={styles.modalSubtitle}>Esta ação não pode ser desfeita.</p>
-            <div className={styles.modalActionsRow}>
-              <button className={styles.modalCancelInline} onClick={() => setShowDeleteSingleModal(false)}>Cancelar</button>
-              <button className={styles.modalDeleteConfirm} onClick={async () => { setShowDeleteSingleModal(false); await handleDelete(contextPhoto.id); }}>Excluir</button>
+      {showDeleteSingleModal && contextPhoto && (() => {
+        const isFav = favorites.has(contextPhoto.id);
+        return (
+          <div className={styles.modalBackdrop} onClick={() => setShowDeleteSingleModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <p className={styles.modalTitle}>{isFav ? 'Foto favoritada' : 'Excluir foto?'}</p>
+              <p className={styles.modalSubtitle}>
+                {isFav
+                  ? 'Remova dos favoritos antes de excluir esta foto.'
+                  : 'Esta ação não pode ser desfeita.'}
+              </p>
+              <div className={styles.modalActionsRow}>
+                <button className={styles.modalCancelInline} onClick={() => setShowDeleteSingleModal(false)}>{isFav ? 'Ok' : 'Cancelar'}</button>
+                {!isFav && (
+                  <button className={styles.modalDeleteConfirm} onClick={async () => { setShowDeleteSingleModal(false); await handleDelete(contextPhoto.id); }}>Excluir</button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
