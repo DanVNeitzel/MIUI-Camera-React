@@ -53,7 +53,7 @@ function formatTime(s) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export default function TopBar({ flashMode, onFlashToggle, timerDelay, onTimerToggle, isRecording, recordingTime, onSettingsOpen }) {
+export default function TopBar({ flashMode, onFlashToggle, timerDelay, onTimerToggle, gridType, onGridToggle, isRecording, recordingTime, onSettingsOpen }) {
   const flashLabel = { off: 'OFF', on: 'ON', auto: 'AUTO' };
   const flashActive = flashMode !== 'off';
 
@@ -93,7 +93,12 @@ export default function TopBar({ flashMode, onFlashToggle, timerDelay, onTimerTo
       </div>
 
       <div className={styles.right}>
-        <button className={styles.iconBtn} aria-label="Grade">
+        <button
+          className={styles.iconBtn}
+          onClick={onGridToggle}
+          style={{ color: gridType && gridType !== 'none' ? '#FFD600' : 'rgba(255,255,255,0.85)' }}
+          aria-label={`Grade: ${gridType || 'none'}`}
+        >
           <GridIcon />
         </button>
         <button className={styles.iconBtn} onClick={onSettingsOpen} aria-label="Configurações">

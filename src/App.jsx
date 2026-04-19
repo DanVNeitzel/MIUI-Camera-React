@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useCamera } from './hooks/useCamera';
 import { useSettings } from './hooks/useSettings';
 import { FILTER_CSS } from './utils/filterMap';
@@ -27,6 +27,30 @@ export default function App() {
   const [proWB, setProWB] = useState(5500);
 
   const { settings, updateSetting } = useSettings();
+
+  const toggleGridType = useCallback(() => {
+    const cycle = { none: 'thirds', thirds: 'square', square: 'both', both: 'none' };
+    updateSetting('gridType', cycle[settings.gridType] ?? 'thirds');
+  }, [updateSetting, settings.gridType]);
+
+  // Request fullscreen on first user interaction
+  useEffect(() => {
+    const requestFullscreen = () => {
+      const el = document.documentElement;
+      if (!document.fullscreenElement) {
+        (el.requestFullscreen?.() ||
+          el.webkitRequestFullscreen?.() ||
+          el.mozRequestFullScreen?.() ||
+          el.msRequestFullscreen?.());
+      }
+    };
+    document.addEventListener('click', requestFullscreen, { once: true });
+    document.addEventListener('touchstart', requestFullscreen, { once: true });
+    return () => {
+      document.removeEventListener('click', requestFullscreen);
+      document.removeEventListener('touchstart', requestFullscreen);
+    };
+  }, []);
 
   // Derive mode characteristics
   const modeProfile = useMemo(
@@ -127,6 +151,8 @@ export default function App() {
           onFlashToggle={toggleFlashMode}
           timerDelay={timerDelay}
           onTimerToggle={toggleTimerDelay}
+          gridType={settings.gridType}
+          onGridToggle={toggleGridType}
           isRecording={isRecording}
           recordingTime={recordingTime}
           onSettingsOpen={() => setShowSettings(true)}
