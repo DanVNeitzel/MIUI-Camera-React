@@ -106,7 +106,7 @@ const CHANGELOG = [
     version: 'v1.0.0',
     date: 'Fevereiro 2026',
     changes: [
-      'Lançamento inicial do MIUI Camera React',
+      'Lançamento inicial do Camera MIUI React',
       'Modos: Foto, Vídeo, Retrato, Pro, Noturno, Panorama',
       'Timer (0 / 3 / 5 / 10 s), grade e tela cheia',
       'Seleção de câmera traseira e frontal',
@@ -279,7 +279,7 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
 
           {/* ── SOBRE ─────────────────────── */}
           <div className={styles.aboutSection}>
-            <span className={styles.aboutVersion}>MIUI Camera v1.0.3</span>
+            <span className={styles.aboutVersion}>Camera MIUI v1.0.3</span>
             <span className={styles.aboutCredits}>Desenvolvido por Daniel Neitzel Vieira · 2026</span>
             <a
               className={styles.aboutLink}
