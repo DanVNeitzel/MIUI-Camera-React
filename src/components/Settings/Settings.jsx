@@ -138,6 +138,7 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
   }, []);
 
   return (
+    <>
     <div
       className={styles.backdrop}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -314,5 +315,6 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
         </div>
       </div>
     )}
+    </>
   );
 }
