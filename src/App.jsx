@@ -152,7 +152,6 @@ export default function App() {
   }, [activeMode, isRecording, timerCount, stopRecording, startRecording, cancelTimer, capturePhoto]);
 
   // Android hardware back button — close top-level overlays
-  useBackButton(showWhatsNew,   () => setShowWhatsNew(false));
   useBackButton(showMoreModes,  () => setShowMoreModes(false));
   useBackButton(showSettings,   () => setShowSettings(false));
   useBackButton(showGallery,    () => setShowGallery(false));

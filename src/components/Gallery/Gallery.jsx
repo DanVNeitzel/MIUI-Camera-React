@@ -106,11 +106,18 @@ async function sharePhoto(url, filename) {
   }
 }
 
+function mimeToExt(mimeType) {
+  if (mimeType === 'image/png')  return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  return 'jpg';
+}
+
 function photoFilename(photo, index) {
   const d = photo.createdAt
     ? new Date(photo.createdAt).toISOString().slice(0, 19).replace(/[:T]/g, '-')
     : new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  return 'foto_' + d + '_' + index + '.jpg';
+  const ext = mimeToExt(photo.mimeType);
+  return 'foto_' + d + '_' + index + '.' + ext;
 }
 
 async function downloadAsZip(photos) {
@@ -418,7 +425,10 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
   const handleSaveEdit = useCallback(async (id, newUrl) => {
     setEditedUrls((prev) => ({ ...prev, [id]: newUrl }));
-    downloadBlob(newUrl, 'foto_editada_' + id + '.jpg');
+    // Detect actual format from the edited blob URL
+    const resp = await fetch(newUrl).catch(() => null);
+    const ext = resp ? mimeToExt((await resp.blob()).type) : 'jpg';
+    downloadBlob(newUrl, 'foto_editada_' + id + '.' + ext);
   }, []);
 
   const toggleSelectMode = () => { setSelectMode((v) => !v); setSelectedIds(new Set()); };

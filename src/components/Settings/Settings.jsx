@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FILTERS, FILTER_CSS } from '../../utils/filterMap';
+import { CHANGELOG } from '../../utils/changelog';
 import styles from './Settings.module.css';
 
 /* ─── Sub-components ─────────────────────────────────────── */
@@ -66,79 +67,6 @@ function FilterStrip({ value, onChange }) {
 }
 
 /* ─── Main Settings component ─────────────────────────────── */
-
-const CHANGELOG = [
-  {
-    version: 'v1.0.5',
-    date: 'Abril 2026',
-    changes: [
-      'Modal "O que há de novo" exibido na primeira abertura com opção de não mostrar novamente',
-      'Modo MAIS: sheet com modos extras — Panorama, Câmera lenta, Time-lapse e Documento',
-      'Modos extras: perfis de filtro e qualidade dedicados para cada modo',
-      'Indicador amarelo em "MAIS" quando um modo extra está ativo',
-      'Botão Voltar do Android fecha o sheet de modos extras',
-    ],
-  },
-  {
-    version: 'v1.0.4',
-    date: 'Abril 2026',
-    changes: [
-      'Correção de orientação: foto capturada em portrait/landscape reflete o ângulo real do dispositivo',
-      'Galeria: opção Compartilhar no menu de contexto (Web Share API)',
-      'Galeria: segurar a foto no viewer abre o menu de contexto',
-      'Galeria: pinch-to-zoom e pan na visualização individual',
-      'Galeria: duplo-toque alterna zoom 1× / 2,5×',
-      'Galeria: botão de rotação (90° CW) na barra do viewer',
-      'Botão Voltar do Android integrado: fecha galeria, configurações e todas as modais em cascata',
-    ],
-  },
-  {
-    version: 'v1.0.3',
-    date: 'Abril 2026',
-    changes: [
-      'Modo Pro: controles reais de ISO e velocidade de obturador',
-      'Tap-to-focus corrigido: tela não escurece mais após o foco',
-      'Slider de brilho pós-foco funcionando corretamente',
-      'Menu nativo do navegador bloqueado no toque longo da galeria',
-      'Configurações: seção Sobre com versão, créditos e link do GitHub',
-      'Configurações: botão Changelog com histórico de versões',
-    ],
-  },
-  {
-    version: 'v1.0.2',
-    date: 'Abril 2026',
-    changes: [
-      'Modal de confirmação para exclusão individual de foto',
-      'Painel de edição: rotação ±90° e controle de qualidade',
-      'Painel de propriedades com dados EXIF e GPS',
-      'Menu de contexto (⋮) e toque longo na galeria',
-      'Favoritos com persistência no localStorage',
-    ],
-  },
-  {
-    version: 'v1.0.1',
-    date: 'Março 2026',
-    changes: [
-      'Foco real via applyConstraints (tap-to-focus)',
-      'Slider de exposição após toque no visor',
-      'Galeria: multi-seleção e download em ZIP',
-      'Suporte offline com Workbox (skipWaiting + clientsClaim)',
-      'Configurações: reset de padrões e forçar atualização',
-    ],
-  },
-  {
-    version: 'v1.0.0',
-    date: 'Fevereiro 2026',
-    changes: [
-      'Lançamento inicial do Camera MIUI React',
-      'Modos: Foto, Vídeo, Retrato, Pro, Noturno, Panorama',
-      'Timer (0 / 3 / 5 / 10 s), grade e tela cheia',
-      'Seleção de câmera traseira e frontal',
-      'PWA instalável com ícones gerados automaticamente',
-      'Deploy contínuo via GitHub Actions',
-    ],
-  },
-];
 
 export default function Settings({ settings, onUpdate, onReset, onClose }) {
   const sheetRef = useRef(null);

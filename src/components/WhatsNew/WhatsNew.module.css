@@ -8,9 +8,18 @@
   animation: fadeIn 0.2s ease;
 }
 
+.backdropOut {
+  animation: fadeOut 0.25s ease forwards;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 .sheet {
@@ -20,11 +29,24 @@
   padding: 24px 22px;
   padding-bottom: calc(28px + var(--safe-bottom, 0px));
   animation: slideUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* #8 — cap height so list scrolls instead of overflowing */
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetOut {
+  animation: whatsNewSlideDown 0.24s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
 @keyframes slideUp {
   from { transform: translateY(50px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes whatsNewSlideDown {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(60px);  opacity: 0; }
 }
 
 .header {
@@ -66,6 +88,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* #8 — scroll when list is long */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .item {

@@ -248,7 +248,7 @@ export function useCamera({
         const loaded = records.map((r) => {
           const url = URL.createObjectURL(r.blob);
           blobUrlsRef.current.push(url);
-          return { id: r.id, url };
+          return { id: r.id, url, mimeType: r.blob.type || 'image/jpeg' };
         });
         setPhotos(loaded);
       })
@@ -435,7 +435,7 @@ export function useCamera({
       const url = URL.createObjectURL(blob);
       blobUrlsRef.current.push(url);
       const provisionalId = Date.now();
-      setPhotos((prev) => [{ id: provisionalId, url }, ...prev]);
+      setPhotos((prev) => [{ id: provisionalId, url, mimeType: blob.type || 'image/jpeg' }, ...prev]);
 
       // Persist to IndexedDB in the background (doesn't block capture unlock)
       idbSavePhoto(blob)
