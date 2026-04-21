@@ -13,6 +13,7 @@ import Controls from './components/Controls/Controls';
 import FlashOverlay from './components/FlashOverlay/FlashOverlay';
 import Gallery from './components/Gallery/Gallery';
 import Settings from './components/Settings/Settings';
+import WhatsNew, { shouldShowWhatsNew } from './components/WhatsNew/WhatsNew';
 import ProControls from './components/ProControls/ProControls';
 import LensSelector from './components/LensSelector/LensSelector';
 
@@ -22,6 +23,7 @@ export default function App() {
   const [activeMode, setActiveMode] = useState('foto');
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(() => shouldShowWhatsNew());
 
   // PRO mode manual controls
   const [proEV, setProEV] = useState(0);
@@ -140,6 +142,7 @@ export default function App() {
   }, [activeMode, isRecording, timerCount, stopRecording, startRecording, cancelTimer, capturePhoto]);
 
   // Android hardware back button — close top-level overlays
+  useBackButton(showWhatsNew,  () => setShowWhatsNew(false));
   useBackButton(showSettings, () => setShowSettings(false));
   useBackButton(showGallery,  () => setShowGallery(false));
 
@@ -250,6 +253,10 @@ export default function App() {
           onReset={resetSettings}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {showWhatsNew && (
+        <WhatsNew onClose={() => setShowWhatsNew(false)} />
       )}
     </div>
   );
