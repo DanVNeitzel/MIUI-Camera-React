@@ -156,6 +156,36 @@ export default function App() {
   useBackButton(showSettings,   () => setShowSettings(false));
   useBackButton(showGallery,    () => setShowGallery(false));
 
+  // ─── Capture shortcut (volume / keyboard) ──────────────────────────────────
+  // Volume keys on Android fire 'AudioVolumeUp' / 'AudioVolumeDown';
+  // some older browsers use 'VolumeUp' / 'VolumeDown'.
+  const CAPTURE_KEY_MAP = {
+    VolumeUp:   ['AudioVolumeUp',   'VolumeUp'],
+    VolumeDown: ['AudioVolumeDown', 'VolumeDown'],
+    Space:      [' '],
+    Enter:      ['Enter'],
+    none:       [],
+  };
+
+  useEffect(() => {
+    const keys = CAPTURE_KEY_MAP[settings.captureKey] ?? [];
+    if (!keys.length) return;
+
+    const handler = (e) => {
+      if (!keys.includes(e.key)) return;
+      // Don't fire while an overlay/modal is open
+      if (showGallery || showSettings || showWhatsNew || showMoreModes) return;
+      // Don't hijack typing inside inputs/textareas
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      e.preventDefault(); // prevent system volume from changing on Android
+      handleCapture();
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [settings.captureKey, showGallery, showSettings, showWhatsNew, showMoreModes, handleCapture]);
+
   return (
     <div className={styles.app}>
       {isOffline && (

@@ -9,6 +9,7 @@ export const SETTINGS_DEFAULTS = {
   gridType:        'none',        // 'none' | 'thirds' | 'square' | 'both'
   filter:          'none',        // see filterMap.js
   defaultCamera:   'environment', // 'environment' | 'user'
+  captureKey:      'VolumeUp',    // 'VolumeUp' | 'VolumeDown' | 'Space' | 'Enter' | 'none'
 };
 
 export function useSettings() {

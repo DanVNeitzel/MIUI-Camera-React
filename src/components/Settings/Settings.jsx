@@ -146,6 +146,20 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
             />
           </SettingRow>
 
+          <SettingRow label="Tecla de captura">
+            <ChipGroup
+              options={[
+                { value: 'VolumeUp',   label: 'Vol +' },
+                { value: 'VolumeDown', label: 'Vol −' },
+                { value: 'Space',      label: 'Espaço' },
+                { value: 'Enter',      label: 'Enter'  },
+                { value: 'none',       label: 'Nenhum' },
+              ]}
+              value={settings.captureKey ?? 'VolumeUp'}
+              onChange={(v) => onUpdate('captureKey', v)}
+            />
+          </SettingRow>
+
           {/* ── FOTO ────────────────────────── */}
           <SectionTitle>FOTO</SectionTitle>
 
