@@ -69,6 +69,19 @@ function FilterStrip({ value, onChange }) {
 
 const CHANGELOG = [
   {
+    version: 'v1.0.4',
+    date: 'Abril 2026',
+    changes: [
+      'Correção de orientação: foto capturada em portrait/landscape reflete o ângulo real do dispositivo',
+      'Galeria: opção Compartilhar no menu de contexto (Web Share API)',
+      'Galeria: segurar a foto no viewer abre o menu de contexto',
+      'Galeria: pinch-to-zoom e pan na visualização individual',
+      'Galeria: duplo-toque alterna zoom 1× / 2,5×',
+      'Galeria: botão de rotação (90° CW) na barra do viewer',
+      'Botão Voltar do Android integrado: fecha galeria, configurações e todas as modais em cascata',
+    ],
+  },
+  {
     version: 'v1.0.3',
     date: 'Abril 2026',
     changes: [

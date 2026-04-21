@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
 import * as exifr from 'exifr';
 import styles from './Gallery.module.css';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -384,6 +385,16 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const [contextIndex,      setContextIndex]      = useState(null);
   const [editedUrls,        setEditedUrls]        = useState({});
 
+  // ── Viewer zoom / pan / rotation ────────────────────────────────────────────────
+  const [viewerZoom,     setViewerZoom]     = useState(1);
+  const [viewerPan,      setViewerPan]      = useState({ x: 0, y: 0 });
+  const [viewerRotation, setViewerRotation] = useState(0);
+  const viewerZoomRef  = useRef(1);
+  const viewerPanRef   = useRef({ x: 0, y: 0 });
+  const pinchRef       = useRef(null);   // { dist, zoom } — active pinch gesture
+  const singlePanRef   = useRef(null);   // { startX, startY, panX, panY } — pan gesture
+  const lastTapRef     = useRef(0);      // timestamp of last tap (double-tap detection)
+
   const selectedPhoto = selectedIndex !== null ? photos[selectedIndex] : null;
   const displayUrl = (photo) => (photo && editedUrls[photo.id]) || (photo && photo.url);
 
@@ -465,7 +476,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
   const longPressTimer = useRef(null);
   const makeLongPressHandlers = (photo, index) => ({
-    onPointerDown: () => {
+    // isPrimary check: if a second finger touches down, cancel the long-press
+    onPointerDown: (e) => {
+      if (!e.isPrimary) { clearTimeout(longPressTimer.current); return; }
       longPressTimer.current = setTimeout(() => {
         longPressTimer.current = null;
         openContextMenu(photo, index);
@@ -476,6 +489,87 @@ export default function Gallery({ photos, onClose, onDelete }) {
     onContextMenu:  (e) => e.preventDefault(),
   });
 
+  // ── Viewer touch: pinch-zoom, pan, double-tap ────────────────────────────────
+  const handleViewerTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchRef.current = { dist: Math.hypot(dx, dy), zoom: viewerZoomRef.current };
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    } else if (e.touches.length === 1) {
+      // Double-tap: toggle zoom
+      const now = Date.now();
+      if (now - lastTapRef.current < 280) {
+        if (viewerZoomRef.current > 1) {
+          setViewerZoom(1); setViewerPan({ x: 0, y: 0 });
+          viewerZoomRef.current = 1; viewerPanRef.current = { x: 0, y: 0 };
+        } else {
+          setViewerZoom(2.5);
+          viewerZoomRef.current = 2.5;
+        }
+        lastTapRef.current = 0;
+        return;
+      }
+      lastTapRef.current = now;
+      singlePanRef.current = {
+        startX: e.touches[0].clientX, startY: e.touches[0].clientY,
+        panX: viewerPanRef.current.x,  panY: viewerPanRef.current.y,
+      };
+    }
+  }, []);
+
+  const handleViewerTouchMove = useCallback((e) => {
+    if (pinchRef.current && e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newZoom = Math.max(1, Math.min(6, pinchRef.current.zoom * (Math.hypot(dx, dy) / pinchRef.current.dist)));
+      setViewerZoom(newZoom);
+      viewerZoomRef.current = newZoom;
+    } else if (singlePanRef.current && e.touches.length === 1 && viewerZoomRef.current > 1) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+      const dx = e.touches[0].clientX - singlePanRef.current.startX;
+      const dy = e.touches[0].clientY - singlePanRef.current.startY;
+      const newPan = { x: singlePanRef.current.panX + dx, y: singlePanRef.current.panY + dy };
+      setViewerPan(newPan);
+      viewerPanRef.current = newPan;
+    }
+  }, []);
+
+  const handleViewerTouchEnd = useCallback((e) => {
+    if (e.touches.length < 2) pinchRef.current = null;
+    if (e.touches.length === 0) {
+      singlePanRef.current = null;
+      if (viewerZoomRef.current <= 1) {
+        setViewerZoom(1); setViewerPan({ x: 0, y: 0 });
+        viewerZoomRef.current = 1; viewerPanRef.current = { x: 0, y: 0 };
+      }
+    }
+  }, []);
+
+  const rotateViewer = useCallback(() => {
+    setViewerRotation((r) => (r + 90) % 360);
+    setViewerZoom(1); setViewerPan({ x: 0, y: 0 });
+    viewerZoomRef.current = 1; viewerPanRef.current = { x: 0, y: 0 };
+  }, []);
+
+  // ── Android back-button integration ─────────────────────────────────────────
+  useBackButton(selectMode,            () => { setSelectMode(false); setSelectedIds(new Set()); });
+  useBackButton(!!selectedPhoto,       () => setSelectedIndex(null));
+  useBackButton(showContextMenu,       () => setShowContextMenu(false));
+  useBackButton(showProperties,        () => setShowProperties(false));
+  useBackButton(showEdit,              () => setShowEdit(false));
+  useBackButton(showDownloadModal,     () => setShowDownloadModal(false));
+  useBackButton(showDeleteModal,       () => setShowDeleteModal(false));
+  useBackButton(showDeleteSingleModal, () => setShowDeleteSingleModal(false));
+
+  // Reset zoom / pan / rotation when navigating between photos
+  useEffect(() => {
+    setViewerZoom(1); setViewerPan({ x: 0, y: 0 }); setViewerRotation(0);
+    viewerZoomRef.current = 1; viewerPanRef.current = { x: 0, y: 0 };
+  }, [selectedIndex]);
+
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Galeria">
 
@@ -485,6 +579,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
             <button className={styles.iconBtn} onClick={() => setSelectedIndex(null)} aria-label="Voltar"><BackIcon /></button>
             <span className={styles.viewerCounter}>{selectedIndex + 1} / {photos.length}</span>
             <div className={styles.viewerActions}>
+              <button className={styles.iconBtn} onClick={rotateViewer} aria-label="Girar foto 90°">
+                <RotateRightIcon />
+              </button>
               <button className={styles.iconBtn} onClick={() => toggleFavorite(selectedPhoto.id)} aria-label="Favorito">
                 <StarIcon filled={favorites.has(selectedPhoto.id)} />
               </button>
@@ -493,7 +590,13 @@ export default function Gallery({ photos, onClose, onDelete }) {
               </button>
             </div>
           </div>
-          <div className={styles.imageWrapper}>
+          <div
+            className={styles.imageWrapper}
+            style={{ touchAction: 'none', userSelect: 'none' }}
+            onTouchStart={handleViewerTouchStart}
+            onTouchMove={handleViewerTouchMove}
+            onTouchEnd={handleViewerTouchEnd}
+          >
             {selectedIndex > 0 && (
               <button className={styles.navBtn + ' ' + styles.navPrev} onClick={navigatePrev} aria-label="Anterior">‹</button>
             )}
@@ -501,6 +604,13 @@ export default function Gallery({ photos, onClose, onDelete }) {
               src={displayUrl(selectedPhoto)}
               alt="Foto"
               className={styles.fullImage}
+              style={{
+                transform: `translate(${viewerPan.x}px, ${viewerPan.y}px) rotate(${viewerRotation}deg) scale(${viewerZoom})`,
+                willChange: viewerZoom !== 1 || viewerRotation !== 0 ? 'transform' : 'auto',
+                transition: viewerZoom === 1 && viewerPan.x === 0 && viewerPan.y === 0 && viewerRotation === 0
+                  ? 'transform 0.3s ease'
+                  : 'none',
+              }}
               {...makeLongPressHandlers(selectedPhoto, selectedIndex)}
             />
             {selectedIndex < photos.length - 1 && (

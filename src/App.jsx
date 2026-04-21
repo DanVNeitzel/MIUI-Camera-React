@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useCamera } from './hooks/useCamera';
+import { useBackButton } from './hooks/useBackButton';
 import { useSettings } from './hooks/useSettings';
 import { FILTER_CSS } from './utils/filterMap';
 import { MODE_PROFILES, computeProFilter } from './utils/modeProfiles';
@@ -137,6 +138,10 @@ export default function App() {
       capturePhoto();
     }
   }, [activeMode, isRecording, timerCount, stopRecording, startRecording, cancelTimer, capturePhoto]);
+
+  // Android hardware back button — close top-level overlays
+  useBackButton(showSettings, () => setShowSettings(false));
+  useBackButton(showGallery,  () => setShowGallery(false));
 
   return (
     <div className={styles.app}>
