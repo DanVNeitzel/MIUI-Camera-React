@@ -157,11 +157,15 @@ export default function App() {
   useBackButton(showGallery,    () => setShowGallery(false));
 
   // ─── Capture shortcut (volume / keyboard) ──────────────────────────────────
-  // Volume keys on Android fire 'AudioVolumeUp' / 'AudioVolumeDown';
-  // some older browsers use 'VolumeUp' / 'VolumeDown'.
+  // Android Chrome intercepts volume keys at the OS level in most contexts.
+  // Workarounds applied here:
+  //   1. Listen on `document` with capture phase (fires before browser default)
+  //   2. passive: false  — allows e.preventDefault() to suppress system volume change
+  //   3. Listen to both `keydown` and `keyup` (some Android builds only fire one)
+  //   4. Include every known key-name variant across browsers/Android versions
   const CAPTURE_KEY_MAP = {
-    VolumeUp:   ['AudioVolumeUp',   'VolumeUp'],
-    VolumeDown: ['AudioVolumeDown', 'VolumeDown'],
+    VolumeUp:   ['AudioVolumeUp',   'VolumeUp',   'MediaVolumeUp'],
+    VolumeDown: ['AudioVolumeDown', 'VolumeDown', 'MediaVolumeDown'],
     Space:      [' '],
     Enter:      ['Enter'],
   };
@@ -173,17 +177,26 @@ export default function App() {
 
     const handler = (e) => {
       if (!keys.includes(e.key)) return;
-      // Don't fire while an overlay/modal is open
       if (showGallery || showSettings || showWhatsNew || showMoreModes) return;
-      // Don't hijack typing inside inputs/textareas
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-      e.preventDefault(); // prevent system volume from changing on Android
+      e.preventDefault(); // must be non-passive to work
+      e.stopPropagation();
+
+      // Deduplicate: only act on keydown, or keyup when keydown was not fired
+      if (e.type === 'keyup' && e._captureHandled) return;
+      if (e.type === 'keydown') e._captureHandled = true;
+
       handleCapture();
     };
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const opts = { capture: true, passive: false };
+    document.addEventListener('keydown', handler, opts);
+    document.addEventListener('keyup',   handler, opts);
+    return () => {
+      document.removeEventListener('keydown', handler, opts);
+      document.removeEventListener('keyup',   handler, opts);
+    };
   }, [settings.captureKeyEnabled, settings.captureKey, showGallery, showSettings, showWhatsNew, showMoreModes, handleCapture]);
 
   return (
