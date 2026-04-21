@@ -110,6 +110,46 @@
   font-weight: 500;
 }
 
+/* ── Toggle row (label + switch on one line) ───────────────────── */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.toggleBtn {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggleBtn.toggleOn {
+  background: #ffd200;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.toggleBtn.toggleOn .toggleThumb {
+  transform: translateX(20px);
+}
+
 /* ── Chip group ────────────────────────────────────────────────── */
 .chipGroup {
   display: flex;

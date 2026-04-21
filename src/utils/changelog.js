@@ -4,10 +4,21 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.0.6';
+export const LATEST_VERSION = 'v1.0.7';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.0.7',
+    date: 'Abril 2026',
+    changes: [
+      'Atalho de captura: botões de volume (Vol + / Vol −), Espaço ou Enter disparam a foto/vídeo',
+      'Configuração "Tecla de captura" nas configurações — toggle para habilitar/desabilitar',
+      'Seletor de tecla (Vol +, Vol −, Espaço, Enter) visível apenas quando o atalho está ativo',
+      'Atalho inativo automaticamente quando galeria, configurações ou qualquer modal está aberto',
+      'e.preventDefault() nos botões de volume — impede alteração do volume do sistema ao capturar',
+    ],
+  },
   {
     version: 'v1.0.6',
     date: 'Abril 2026',

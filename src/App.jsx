@@ -164,10 +164,10 @@ export default function App() {
     VolumeDown: ['AudioVolumeDown', 'VolumeDown'],
     Space:      [' '],
     Enter:      ['Enter'],
-    none:       [],
   };
 
   useEffect(() => {
+    if (!(settings.captureKeyEnabled ?? true)) return;
     const keys = CAPTURE_KEY_MAP[settings.captureKey] ?? [];
     if (!keys.length) return;
 
@@ -184,7 +184,7 @@ export default function App() {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [settings.captureKey, showGallery, showSettings, showWhatsNew, showMoreModes, handleCapture]);
+  }, [settings.captureKeyEnabled, settings.captureKey, showGallery, showSettings, showWhatsNew, showMoreModes, handleCapture]);
 
   return (
     <div className={styles.app}>

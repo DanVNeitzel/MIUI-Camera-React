@@ -3,13 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 const STORAGE_KEY = 'miui-camera-settings';
 
 export const SETTINGS_DEFAULTS = {
-  photoQuality:    'high',        // 'low' | 'medium' | 'high' | 'max'
-  saveFormat:      'jpeg',        // 'jpeg' | 'png' | 'webp'
-  videoResolution: '1080p',       // '720p' | '1080p' | '4k'
-  gridType:        'none',        // 'none' | 'thirds' | 'square' | 'both'
-  filter:          'none',        // see filterMap.js
-  defaultCamera:   'environment', // 'environment' | 'user'
-  captureKey:      'VolumeUp',    // 'VolumeUp' | 'VolumeDown' | 'Space' | 'Enter' | 'none'
+  photoQuality:       'high',        // 'low' | 'medium' | 'high' | 'max'
+  saveFormat:         'jpeg',        // 'jpeg' | 'png' | 'webp'
+  videoResolution:    '1080p',       // '720p' | '1080p' | '4k'
+  gridType:           'none',        // 'none' | 'thirds' | 'square' | 'both'
+  filter:             'none',        // see filterMap.js
+  defaultCamera:      'environment', // 'environment' | 'user'
+  captureKeyEnabled:  true,          // habilita atalho de tecla/volume para captura
+  captureKey:         'VolumeUp',    // 'VolumeUp' | 'VolumeDown' | 'Space' | 'Enter'
 };
 
 export function useSettings() {

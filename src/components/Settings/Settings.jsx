@@ -146,19 +146,33 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
             />
           </SettingRow>
 
-          <SettingRow label="Tecla de captura">
+          <div className={styles.toggleRow}>
+            <span className={styles.rowLabel}>Tecla de captura</span>
+            <button
+              role="switch"
+              aria-checked={settings.captureKeyEnabled ?? true}
+              className={`${styles.toggleBtn} ${(settings.captureKeyEnabled ?? true) ? styles.toggleOn : ''}`}
+              onClick={() => onUpdate('captureKeyEnabled', !(settings.captureKeyEnabled ?? true))}
+              aria-label="Habilitar tecla de captura"
+            >
+              <span className={styles.toggleThumb} />
+            </button>
+          </div>
+
+          {(settings.captureKeyEnabled ?? true) && (
+          <SettingRow label="Tecla">
             <ChipGroup
               options={[
                 { value: 'VolumeUp',   label: 'Vol +' },
                 { value: 'VolumeDown', label: 'Vol −' },
                 { value: 'Space',      label: 'Espaço' },
                 { value: 'Enter',      label: 'Enter'  },
-                { value: 'none',       label: 'Nenhum' },
               ]}
               value={settings.captureKey ?? 'VolumeUp'}
               onChange={(v) => onUpdate('captureKey', v)}
             />
           </SettingRow>
+          )}
 
           {/* ── FOTO ────────────────────────── */}
           <SectionTitle>FOTO</SectionTitle>
