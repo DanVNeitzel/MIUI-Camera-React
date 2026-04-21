@@ -54,6 +54,54 @@ function parseCameraLabel(label = '', index) {
 }
 
 /**
+ * Returns the current device orientation angle (degrees).
+ * 0/180 = portrait, 90/270 = landscape.
+ */
+function getOrientationAngle() {
+  if (typeof screen !== 'undefined' && screen.orientation?.angle != null) {
+    return screen.orientation.angle;
+  }
+  if (typeof window !== 'undefined' && window.orientation != null) {
+    return ((window.orientation % 360) + 360) % 360;
+  }
+  return 0;
+}
+
+/**
+ * Apply orientation-aware + front-camera-mirror transforms to a canvas context,
+ * then draw the video frame. ctx must already have the correct canvas dimensions
+ * (canvasW × canvasH) set.
+ *
+ * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} ctx
+ * @param {HTMLVideoElement|VideoFrame} video
+ * @param {number} vw  - video natural width
+ * @param {number} vh  - video natural height
+ * @param {number} canvasW - output canvas width
+ * @param {number} canvasH - output canvas height
+ * @param {boolean} isFront - true for front-facing camera (apply horizontal mirror)
+ * @param {number}  angle   - device orientation angle (0|90|180|270)
+ * @param {boolean} needsRotation - should we rotate 90°?
+ * @param {string}  cssFilter - CSS filter string, e.g. 'brightness(1.2)'
+ */
+function applyFrameToContext(ctx, video, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter) {
+  if (needsRotation) {
+    if (angle === 180) {
+      // Upside-down portrait → rotate 90° CCW
+      ctx.translate(0, canvasH); // canvasH = vw
+      ctx.rotate(-Math.PI / 2);
+    } else {
+      // Natural portrait (0°) → rotate 90° CW
+      // Left column of landscape sensor = top of phone = top of portrait
+      ctx.translate(canvasW, 0); // canvasW = vh
+      ctx.rotate(Math.PI / 2);
+    }
+  }
+  if (isFront) { ctx.translate(vw, 0); ctx.scale(-1, 1); }
+  if (cssFilter) ctx.filter = cssFilter;
+  ctx.drawImage(video, 0, 0, vw, vh);
+}
+
+/**
  * Multi-frame stacking via GPU compositing — NO getImageData / putImageData.
  *
  * Algorithm: incremental running average using canvas globalAlpha + source-over.
@@ -62,26 +110,24 @@ function parseCameraLabel(label = '', index) {
  *
  * ~10× faster than the getImageData/Float32Array approach for 1080p.
  */
-async function stackFrames(video, w, h, cssFilter, facingMode, count, mime, quality) {
+async function stackFrames(video, vw, vh, canvasW, canvasH, cssFilter, isFront, angle, needsRotation, count, mime, quality) {
   const pause  = (ms) => new Promise((r) => setTimeout(r, ms));
   const useOC  = typeof OffscreenCanvas !== 'undefined';
 
   const out = useOC
-    ? new OffscreenCanvas(w, h)
-    : (() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; })();
+    ? new OffscreenCanvas(canvasW, canvasH)
+    : (() => { const c = document.createElement('canvas'); c.width = canvasW; c.height = canvasH; return c; })();
   const ctx = out.getContext('2d');
 
   // Opaque black base — required so source-over compositing works correctly
   ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(0, 0, canvasW, canvasH);
 
   for (let i = 0; i < count; i++) {
     if (i > 0) await pause(60); // ~2 video frames at 30 fps
     ctx.save();
     ctx.globalAlpha = 1 / (i + 1); // weight for running average
-    if (facingMode === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
-    if (cssFilter) ctx.filter = cssFilter;
-    ctx.drawImage(video, 0, 0, w, h); // GPU-side snapshot of current frame
+    applyFrameToContext(ctx, video, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
     ctx.restore();
   }
 
@@ -122,6 +168,9 @@ export function useCamera({
 
   // Focus/exposure timer ref
   const focusTimerRef = useRef(null);
+
+  // Device orientation angle ref — updated on every orientationchange event
+  const orientationAngleRef = useRef(getOrientationAngle());
 
   // Ref mirrors — allow callbacks to read latest value without stale closures
   const isCapturingRef = useRef(false);
@@ -175,6 +224,17 @@ export function useCamera({
   useEffect(() => { videoResolutionRef.current    = videoResolution;   }, [videoResolution]);
   useEffect(() => { filterOverrideCSSRef.current  = filterOverrideCSS; }, [filterOverrideCSS]);
   useEffect(() => { multiFrameCountRef.current    = multiFrameCount;   }, [multiFrameCount]);
+
+  // Track device orientation changes so doCapture can rotate the canvas correctly
+  useEffect(() => {
+    const update = () => { orientationAngleRef.current = getOrientationAngle(); };
+    if (typeof screen !== 'undefined' && screen.orientation) {
+      screen.orientation.addEventListener('change', update);
+      return () => screen.orientation.removeEventListener('change', update);
+    }
+    window.addEventListener('orientationchange', update);
+    return () => window.removeEventListener('orientationchange', update);
+  }, []);
 
   // Initialize internal fallback canvas once
   useEffect(() => {
@@ -321,8 +381,8 @@ export function useCamera({
 
     try {
       const video = videoRef.current;
-      const w = video.videoWidth || 1280;
-      const h = video.videoHeight || 720;
+      const vw = video.videoWidth || 1280;
+      const vh = video.videoHeight || 720;
       let blob;
 
       const mime       = MIME_MAP[saveFormatRef.current]      || 'image/jpeg';
@@ -330,21 +390,28 @@ export function useCamera({
       // Mode filter overrides settings filter
       const cssFilter  = filterOverrideCSSRef.current || FILTER_CSS[filterRef.current] || '';
       const frames     = multiFrameCountRef.current;
+      const isFront    = facingModeRef.current === 'user';
+
+      // Determine if the photo needs a 90° rotation to match device orientation.
+      // The camera sensor always streams in landscape; if the device is in portrait
+      // (angle 0° or 180°) AND the video is wider than tall, we rotate the canvas.
+      const angle          = orientationAngleRef.current;
+      const needsRotation  = vw > vh && (angle === 0 || angle === 180);
+      const canvasW        = needsRotation ? vh : vw;
+      const canvasH        = needsRotation ? vw : vh;
 
       if (frames > 1) {
         // ── Night mode: multi-frame pixel-averaging (noise reduction) ──
         blob = await stackFrames(
-          video, w, h, cssFilter, facingModeRef.current, frames, mime, quality
+          video, vw, vh, canvasW, canvasH, cssFilter, isFront, angle, needsRotation, frames, mime, quality
         );
       } else if (typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap === 'function') {
         // Off-thread rendering — doesn't block main thread for large frames
         const bitmap = await createImageBitmap(video);
-        const offscreen = new OffscreenCanvas(w, h);
+        const offscreen = new OffscreenCanvas(canvasW, canvasH);
         const ctx = offscreen.getContext('2d');
         ctx.save();
-        if (facingModeRef.current === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
-        if (cssFilter) ctx.filter = cssFilter;
-        ctx.drawImage(bitmap, 0, 0, w, h);
+        applyFrameToContext(ctx, bitmap, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
         ctx.restore();
         bitmap.close();
         blob = await offscreen.convertToBlob(
@@ -353,13 +420,11 @@ export function useCamera({
       } else {
         // Fallback: synchronous canvas on main thread
         const canvas = canvasRef.current;
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width  = canvasW;
+        canvas.height = canvasH;
         const ctx = canvas.getContext('2d');
         ctx.save();
-        if (facingModeRef.current === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1); }
-        if (cssFilter) ctx.filter = cssFilter;
-        ctx.drawImage(video, 0, 0, w, h);
+        applyFrameToContext(ctx, video, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
         ctx.restore();
         blob = await new Promise((res) =>
           mime === 'image/png' ? canvas.toBlob(res, mime) : canvas.toBlob(res, mime, quality)
