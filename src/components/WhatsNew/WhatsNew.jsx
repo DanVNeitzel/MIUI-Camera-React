@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from './WhatsNew.module.css';
 
-export const LATEST_VERSION = 'v1.0.4';
+export const LATEST_VERSION = 'v1.0.5';
 const STORAGE_KEY = 'whatsNew_seen_' + LATEST_VERSION;
 
 export function shouldShowWhatsNew() {
@@ -14,13 +14,11 @@ export function markWhatsNewSeen() {
 }
 
 const CHANGES = [
-  'Correção de orientação: foto capturada em portrait/landscape reflete o ângulo real do dispositivo',
-  'Galeria: opção Compartilhar no menu de contexto (Web Share API)',
-  'Galeria: segurar a foto no viewer abre o menu de contexto',
-  'Galeria: pinch-to-zoom e pan na visualização individual',
-  'Galeria: duplo-toque alterna zoom 1× / 2,5×',
-  'Galeria: botão de rotação (90° CW) na barra do viewer',
-  'Botão Voltar do Android: fecha galeria, configurações e modais em cascata',
+  'Modal "O que há de novo" exibido na primeira abertura com opção de não mostrar novamente',
+  'Modo MAIS: sheet com modos extras — Panorama, Câmera lenta, Time-lapse e Documento',
+  'Modos extras: perfis de filtro e qualidade dedicados para cada modo',
+  'Indicador amarelo em "MAIS" quando um modo extra está ativo',
+  'Botão Voltar do Android fecha o sheet de modos extras',
 ];
 
 export default function WhatsNew({ onClose }) {

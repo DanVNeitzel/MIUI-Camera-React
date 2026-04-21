@@ -10,7 +10,7 @@ export const CAMERA_MODES = [
   { id: 'mais',    label: 'MAIS' },
 ];
 
-export default function ModeSelector({ activeMode, onModeChange }) {
+export default function ModeSelector({ activeMode, onModeChange, extraModeActive }) {
   const scrollRef = useRef(null);
   const activeRef = useRef(null);
 
@@ -28,6 +28,8 @@ export default function ModeSelector({ activeMode, onModeChange }) {
       <div className={styles.scroll} ref={scrollRef}>
         {CAMERA_MODES.map((mode) => {
           const isActive = activeMode === mode.id;
+          // "MAIS" gets the active dot when an extra mode is selected
+          const showDot = isActive || (mode.id === 'mais' && extraModeActive);
           return (
             <button
               key={mode.id}
@@ -38,7 +40,7 @@ export default function ModeSelector({ activeMode, onModeChange }) {
               aria-pressed={isActive}
             >
               <span className={styles.modeLabel}>{mode.label}</span>
-              {isActive && <span className={styles.activeDot} />}
+              {showDot && <span className={styles.activeDot} />}
             </button>
           );
         })}

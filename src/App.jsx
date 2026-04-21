@@ -14,6 +14,7 @@ import FlashOverlay from './components/FlashOverlay/FlashOverlay';
 import Gallery from './components/Gallery/Gallery';
 import Settings from './components/Settings/Settings';
 import WhatsNew, { shouldShowWhatsNew } from './components/WhatsNew/WhatsNew';
+import MoreModes, { MORE_MODES } from './components/MoreModes/MoreModes';
 import ProControls from './components/ProControls/ProControls';
 import LensSelector from './components/LensSelector/LensSelector';
 
@@ -24,6 +25,15 @@ export default function App() {
   const [showGallery, setShowGallery] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(() => shouldShowWhatsNew());
+  const [showMoreModes, setShowMoreModes] = useState(false);
+
+  // Derived: is the active mode one of the "extra" modes from the More sheet?
+  const isExtraMode = MORE_MODES.some((m) => m.id === activeMode);
+
+  const handleModeChange = useCallback((id) => {
+    if (id === 'mais') { setShowMoreModes(true); return; }
+    setActiveMode(id);
+  }, []);
 
   // PRO mode manual controls
   const [proEV, setProEV] = useState(0);
@@ -142,9 +152,10 @@ export default function App() {
   }, [activeMode, isRecording, timerCount, stopRecording, startRecording, cancelTimer, capturePhoto]);
 
   // Android hardware back button — close top-level overlays
-  useBackButton(showWhatsNew,  () => setShowWhatsNew(false));
-  useBackButton(showSettings, () => setShowSettings(false));
-  useBackButton(showGallery,  () => setShowGallery(false));
+  useBackButton(showWhatsNew,   () => setShowWhatsNew(false));
+  useBackButton(showMoreModes,  () => setShowMoreModes(false));
+  useBackButton(showSettings,   () => setShowSettings(false));
+  useBackButton(showGallery,    () => setShowGallery(false));
 
   return (
     <div className={styles.app}>
@@ -221,7 +232,7 @@ export default function App() {
             />
           )}
 
-          <ModeSelector activeMode={activeMode} onModeChange={setActiveMode} />
+          <ModeSelector activeMode={isExtraMode ? 'mais' : activeMode} onModeChange={handleModeChange} extraModeActive={isExtraMode} />
           <Controls
             onCapture={handleCapture}
             onSwitchCamera={switchCamera}
@@ -237,6 +248,14 @@ export default function App() {
           />
         </div>
       </div>
+
+      {showMoreModes && (
+        <MoreModes
+          activeMode={activeMode}
+          onSelect={setActiveMode}
+          onClose={() => setShowMoreModes(false)}
+        />
+      )}
 
       {showGallery && (
         <Gallery

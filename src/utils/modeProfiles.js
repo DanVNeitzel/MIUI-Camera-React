@@ -64,6 +64,42 @@ export const MODE_PROFILES = {
     badge:          null,
     badgeIcon:      null,
   },
+  panorama: {
+    previewFilter:  '',
+    captureQuality: 'max',
+    multiFrame:     1,
+    vignette:       false,
+    proControls:    false,
+    badge:          'Panorama',
+    badgeIcon:      '⟺',
+  },
+  lento: {
+    previewFilter:  '',
+    captureQuality: null,
+    multiFrame:     1,
+    vignette:       false,
+    proControls:    false,
+    badge:          'Câmera lenta',
+    badgeIcon:      '⏱',
+  },
+  timelapse: {
+    previewFilter:  'saturate(1.15) contrast(1.05)',
+    captureQuality: 'high',
+    multiFrame:     1,
+    vignette:       false,
+    proControls:    false,
+    badge:          'Time-lapse',
+    badgeIcon:      '⏩',
+  },
+  documento: {
+    previewFilter:  'contrast(1.35) saturate(0.15) brightness(1.1)',
+    captureQuality: 'max',
+    multiFrame:     1,
+    vignette:       false,
+    proControls:    false,
+    badge:          'Documento',
+    badgeIcon:      '📄',
+  },
 };
 
 /**

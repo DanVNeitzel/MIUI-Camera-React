@@ -69,6 +69,17 @@ function FilterStrip({ value, onChange }) {
 
 const CHANGELOG = [
   {
+    version: 'v1.0.5',
+    date: 'Abril 2026',
+    changes: [
+      'Modal "O que há de novo" exibido na primeira abertura com opção de não mostrar novamente',
+      'Modo MAIS: sheet com modos extras — Panorama, Câmera lenta, Time-lapse e Documento',
+      'Modos extras: perfis de filtro e qualidade dedicados para cada modo',
+      'Indicador amarelo em "MAIS" quando um modo extra está ativo',
+      'Botão Voltar do Android fecha o sheet de modos extras',
+    ],
+  },
+  {
     version: 'v1.0.4',
     date: 'Abril 2026',
     changes: [
