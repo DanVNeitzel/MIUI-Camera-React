@@ -124,6 +124,7 @@ export default function App() {
     toggleTimerDelay,
     deletePhoto,
     handleZoomChange,
+    focusLocked,
     handleFocusTap,
     handleTouchStart,
     handleTouchMove,
@@ -211,6 +212,7 @@ export default function App() {
         facingMode={facingMode}
         zoom={zoom}
         focusPoint={focusPoint}
+        focusLocked={focusLocked}
         onFocusTap={handleFocusTap}
         exposureCompensation={exposureCompensation}
         exposureRange={exposureRange}

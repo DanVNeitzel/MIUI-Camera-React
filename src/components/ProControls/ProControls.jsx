@@ -39,8 +39,17 @@ export default function ProControls({ ev, wb, iso, shutter, onEvChange, onWbChan
       <div className={styles.sliderRow}>
         <div className={styles.labelGroup}>
           <span className={styles.paramName}>EV</span>
-          <span className={styles.paramValue}>{ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1)}</span>
+          <span className={styles.paramValue}>
+            {ev === 0 ? 'Auto' : ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1)}
+          </span>
         </div>
+        <button
+          className={`${styles.autoChip} ${ev === 0 ? styles.autoChipActive : ''}`}
+          onClick={() => onEvChange(0)}
+          aria-label="EV automático"
+        >
+          A
+        </button>
         <div className={styles.sliderTrack}>
           <div
             className={styles.sliderFill}
@@ -65,8 +74,15 @@ export default function ProControls({ ev, wb, iso, shutter, onEvChange, onWbChan
       <div className={styles.sliderRow}>
         <div className={styles.labelGroup}>
           <span className={styles.paramName}>WB</span>
-          <span className={styles.paramValue}>{wb}K</span>
+          <span className={styles.paramValue}>{wb === 5500 ? 'Auto' : `${wb}K`}</span>
         </div>
+        <button
+          className={`${styles.autoChip} ${wb === 5500 ? styles.autoChipActive : ''}`}
+          onClick={() => onWbChange(5500)}
+          aria-label="WB automático"
+        >
+          A
+        </button>
         <div className={styles.sliderTrack}>
           <div className={styles.wbGradient} />
           <input

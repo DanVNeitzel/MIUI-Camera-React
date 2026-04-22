@@ -169,6 +169,10 @@ export function useCamera({
   // Focus/exposure timer ref
   const focusTimerRef = useRef(null);
 
+  // Focus-lock long-press refs
+  const longPressTimerRef  = useRef(null);
+  const longPressDidFireRef = useRef(false);
+
   // Device orientation angle ref — updated on every orientationchange event
   const orientationAngleRef = useRef(getOrientationAngle());
 
@@ -207,12 +211,15 @@ export function useCamera({
   const [timerCount, setTimerCount] = useState(null);
   const [exposureCompensation, setExposureCompensationState] = useState(0);
   const [exposureRange, setExposureRange] = useState(null); // { min, max, step } | null
+  const [focusLocked, setFocusLocked] = useState(false);
+  const focusLockedRef = useRef(false);
 
   // Derived: most recent photo URL for thumbnail
   const capturedPhoto = photos[0]?.url ?? null;
 
   // Keep ref mirrors in sync with state
   useEffect(() => { facingModeRef.current = facingMode; }, [facingMode]);
+  useEffect(() => { focusLockedRef.current = focusLocked; }, [focusLocked]);
   useEffect(() => { flashModeRef.current = flashMode; }, [flashMode]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { timerDelayRef.current = timerDelay; }, [timerDelay]);
@@ -501,6 +508,9 @@ export function useCamera({
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
     setZoom(1);
     zoomRef.current = 1;
+    setFocusLocked(false);
+    focusLockedRef.current = false;
+    setFocusPoint(null);
   }, []);
 
   // ── Lens selection (pick a specific physical camera) ──────────────────────────
@@ -509,6 +519,9 @@ export function useCamera({
     setSelectedDeviceId(deviceId);
     setZoom(1);
     zoomRef.current = 1;
+    setFocusLocked(false);
+    focusLockedRef.current = false;
+    setFocusPoint(null);
   }, []);
 
   // ── Flash toggle ─────────────────────────────────────────────────────────────
@@ -606,8 +619,63 @@ export function useCamera({
     }
   }, []);
 
+  // ── Focus lock (long-press) ──────────────────────────────────────────────────
+  const lockFocusAt = useCallback(async (x, y) => {
+    longPressDidFireRef.current = true;
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
+    setFocusPoint({ x, y, id: Date.now() });
+    setFocusLocked(true);
+    focusLockedRef.current = true;
+    setExposureCompensationState(0);
+
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities();
+      const adv = {};
+      if (caps.pointOfInterest) adv.pointOfInterest = { x: x / 100, y: y / 100 };
+      // Lock focus: prefer manual, fallback to single-shot
+      if (caps.focusMode?.includes('manual')) adv.focusMode = 'manual';
+      else if (caps.focusMode?.includes('single-shot')) adv.focusMode = 'single-shot';
+      if (caps.exposureMode?.includes('continuous')) adv.exposureMode = 'continuous';
+      if (caps.exposureCompensation) adv.exposureCompensation = 0;
+      if (Object.keys(adv).length > 0) await track.applyConstraints({ advanced: [adv] });
+      if (caps.exposureCompensation) setExposureRange(caps.exposureCompensation);
+    } catch (_) {}
+  }, []);
+
+  const unlockFocus = useCallback(async () => {
+    if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
+    setFocusPoint(null);
+    setFocusLocked(false);
+    focusLockedRef.current = false;
+
+    // Restore continuous autofocus
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const caps = track.getCapabilities();
+      const adv = {};
+      if (caps.focusMode?.includes('continuous')) adv.focusMode = 'continuous';
+      if (caps.exposureMode?.includes('continuous')) adv.exposureMode = 'continuous';
+      if (Object.keys(adv).length > 0) await track.applyConstraints({ advanced: [adv] });
+    } catch (_) {}
+  }, []);
+
   // ── Tap-to-focus ─────────────────────────────────────────────────────────────
   const handleFocusTap = useCallback(async (e) => {
+    // Suppress the synthetic click that fires right after a long-press touchend
+    if (longPressDidFireRef.current) {
+      longPressDidFireRef.current = false;
+      return;
+    }
+
+    // If focus is locked, tap anywhere to unlock
+    if (focusLockedRef.current) {
+      unlockFocus();
+      return;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -617,6 +685,8 @@ export function useCamera({
     if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
     setFocusPoint({ x, y, id: Date.now() });
     focusTimerRef.current = setTimeout(() => setFocusPoint(null), 4500);
+
+    setExposureCompensationState(0);
 
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
@@ -636,6 +706,9 @@ export function useCamera({
       if (caps.exposureMode?.includes('continuous')) {
         adv.exposureMode = 'continuous';
       }
+      if (caps.exposureCompensation) {
+        adv.exposureCompensation = 0;
+      }
       if (Object.keys(adv).length > 0) {
         await track.applyConstraints({ advanced: [adv] });
       }
@@ -645,7 +718,7 @@ export function useCamera({
     } catch (_) {
       // Focus/exposure constraints not supported on this device
     }
-  }, []);
+  }, [unlockFocus]);
 
   // ── Exposure compensation ─────────────────────────────────────────────────────
   const setExposure = useCallback(async (value) => {
@@ -680,15 +753,36 @@ export function useCamera({
   // Uses zoomRef instead of zoom state → no stale closure, no recreating on every zoom change
   const handleTouchStart = useCallback((e) => {
     if (e.touches.length === 2) {
+      // Multi-touch: cancel any pending long-press
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       pinchStartDistRef.current = Math.hypot(dx, dy);
       pinchStartZoomRef.current = zoomRef.current;
+    } else if (e.touches.length === 1 && !focusLockedRef.current) {
+      // Single touch: start long-press timer for focus lock
+      const rect = e.currentTarget.getBoundingClientRect();
+      const t = e.touches[0];
+      const x = ((t.clientX - rect.left) / rect.width) * 100;
+      const y = ((t.clientY - rect.top) / rect.height) * 100;
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
+        lockFocusAt(x, y);
+      }, 650);
     }
-  }, []); // ✅ no deps
+  }, [lockFocusAt]);
 
   const handleTouchMove = useCallback(
     (e) => {
+      // Cancel long-press if finger moved significantly
+      if (longPressTimerRef.current && e.touches.length === 1) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       if (e.touches.length === 2 && pinchStartDistRef.current) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -705,6 +799,10 @@ export function useCamera({
   );
 
   const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
     pinchStartDistRef.current = null;
     pinchStartZoomRef.current = null;
   }, []);
@@ -731,6 +829,7 @@ export function useCamera({
     exposureRange,
     setExposure,
     applyProSettings,
+    focusLocked,
     switchCamera,
     selectCamera,
     cameraList,

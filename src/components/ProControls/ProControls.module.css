@@ -101,6 +101,35 @@
   white-space: nowrap;
 }
 
+/* ── Auto chip (EV / WB) ────────────────────────────── */
+.autoChip {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  margin-left: 4px;
+}
+
+.autoChip:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.autoChipActive {
+  background: rgba(255, 106, 0, 0.18);
+  color: #ff6a00;
+  border-color: rgba(255, 106, 0, 0.45);
+}
+
 /* ── Slider track ───────────────────────────────────── */
 .sliderTrack {
   position: relative;

@@ -88,7 +88,7 @@ export default function TopBar({ flashMode, onFlashToggle, timerDelay, onTimerTo
             <span className={styles.recTime}>{formatTime(recordingTime)}</span>
           </div>
         ) : (
-          <span className={styles.logo}>MIUI</span>
+          <span className={styles.logo}></span>
         )}
       </div>
 
