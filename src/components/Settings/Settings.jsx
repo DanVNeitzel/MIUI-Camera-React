@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FILTERS, FILTER_CSS } from '../../utils/filterMap';
-import { CHANGELOG } from '../../utils/changelog';
+import { CHANGELOG, LATEST_VERSION } from '../../utils/changelog';
 import styles from './Settings.module.css';
 
 /* ─── Sub-components ─────────────────────────────────────── */
@@ -259,7 +259,7 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
 
           {/* ── SOBRE ─────────────────────── */}
           <div className={styles.aboutSection}>
-            <span className={styles.aboutVersion}>Camera MIUI v1.0.3</span>
+            <span className={styles.aboutVersion}>Camera MIUI {LATEST_VERSION}</span>
             <span className={styles.aboutCredits}>Desenvolvido por Daniel Neitzel Vieira · 2026</span>
             <a
               className={styles.aboutLink}

@@ -4,10 +4,25 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.0.7';
+export const LATEST_VERSION = 'v1.0.8';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.0.8',
+    date: 'Abril 2026',
+    changes: [
+      'Modo Panorama: captura por varredura (até 8 frames) com costura horizontal automática e 35% de sobreposição — exportado como JPEG',
+      'Modo Panorama: guia visual com linha de horizonte, seta animada e barra de progresso',
+      'Modo Documento: guia de enquadramento A4 com cantoneiras brancas e filtro de alto contraste/dessaturação',
+      'Câmera lenta: gravação real via MediaRecorder com constraint de alta taxa de quadros (60 / 120 / 240 / 480 fps)',
+      'Time-lapse: captura de frames no canvas em intervalo configurável (0,5 s a 1 min) e exportação acelerada em vídeo',
+      'VideoModeControls: seletor de FPS para câmera lenta e seletor de intervalo para time-lapse, desabilitados durante gravação',
+      'Modo Pro: botões EV Auto e WB Auto — redefinem exposição (0 EV) e balanço de branco (5500 K) com um toque',
+      'Foco: EV zerado automaticamente ao tocar na tela para focar',
+      'Foco: toque longo (650 ms) trava o foco — anel branco com cadeado; toque normal destrava',
+    ],
+  },
   {
     version: 'v1.0.7',
     date: 'Abril 2026',

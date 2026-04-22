@@ -146,6 +146,10 @@ export function useCamera({
   filterOverrideCSS  = '',   // raw CSS string — overrides ID-based filter (used by modes)
   multiFrameCount    = 1,    // >1 = frame-stacking (night mode noise reduction)
   defaultCamera      = 'environment', // 'environment' | 'user'
+  slowMotion         = false,  // request high framerate for slow-mo mode
+  slowMotionFps      = 0,      // 0 = auto (browser default), >0 = specific fps
+  timelapse          = false,  // canvas interval-based recording
+  timelapseMs        = 1000,  // ms between captured frames
 } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -160,6 +164,14 @@ export function useCamera({
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+
+  // Slow-motion / timelapse mode refs
+  const slowMotionRef       = useRef(slowMotion);
+  const slowMotionFpsRef    = useRef(slowMotionFps);
+  const timelapseRef        = useRef(timelapse);
+  const timelapseMsRef      = useRef(timelapseMs);
+  const timelapseFrameTimer = useRef(null);  // setInterval for frame capture
+  const timelapseCanvasRef  = useRef(null);  // offscreen canvas for timelapse
 
   // Timer refs
   const timerIntervalRef = useRef(null);
@@ -231,6 +243,10 @@ export function useCamera({
   useEffect(() => { videoResolutionRef.current    = videoResolution;   }, [videoResolution]);
   useEffect(() => { filterOverrideCSSRef.current  = filterOverrideCSS; }, [filterOverrideCSS]);
   useEffect(() => { multiFrameCountRef.current    = multiFrameCount;   }, [multiFrameCount]);
+  useEffect(() => { slowMotionRef.current          = slowMotion;         }, [slowMotion]);
+  useEffect(() => { slowMotionFpsRef.current        = slowMotionFps;      }, [slowMotionFps]);
+  useEffect(() => { timelapseRef.current            = timelapse;          }, [timelapse]);
+  useEffect(() => { timelapseMsRef.current          = timelapseMs;        }, [timelapseMs]);
 
   // Track device orientation changes so doCapture can rotate the canvas correctly
   useEffect(() => {
@@ -270,6 +286,7 @@ export function useCamera({
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
+      if (timelapseFrameTimer.current) clearInterval(timelapseFrameTimer.current);
     };
   }, []);
 
@@ -307,10 +324,17 @@ export function useCamera({
       }
 
       const res = RES_MAP[videoResolutionRef.current] || RES_MAP['1080p'];
+      // For slow-motion: request the chosen fps (0 = auto, no constraint added)
+      const fps = slowMotionFpsRef.current;
+      const frameRateConstraint = slowMotionRef.current && fps > 0
+        ? { frameRate: { ideal: fps, min: 30 } }
+        : slowMotionRef.current
+          ? { frameRate: { ideal: 120, min: 30 } }
+          : {};
       // Use specific deviceId when the user picked a lens; otherwise use facingMode
       const videoConstraints = selectedDeviceId
-        ? { deviceId: { exact: selectedDeviceId }, ...res }
-        : { facingMode, ...res };
+        ? { deviceId: { exact: selectedDeviceId }, ...res, ...frameRateConstraint }
+        : { facingMode, ...res, ...frameRateConstraint };
       const stream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: false,
@@ -335,7 +359,7 @@ export function useCamera({
       setIsLoading(false);
       setIsSwitching(false); // end switch animation
     }
-  }, [facingMode, selectedDeviceId, detectCameras]);
+  }, [facingMode, selectedDeviceId, slowMotionFps, detectCameras]);
 
   useEffect(() => {
     startCamera();
@@ -614,6 +638,11 @@ export function useCamera({
   }, []);
 
   const stopRecording = useCallback(() => {
+    // Stop the timelapse frame-capture interval first
+    if (timelapseFrameTimer.current) {
+      clearInterval(timelapseFrameTimer.current);
+      timelapseFrameTimer.current = null;
+    }
     if (mediaRecorderRef.current && isRecordingRef.current) {
       mediaRecorderRef.current.stop();
     }

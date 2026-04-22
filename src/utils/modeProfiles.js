@@ -52,6 +52,7 @@ export const MODE_PROFILES = {
     multiFrame:     1,
     vignette:       false,
     proControls:    false,
+    isVideo:        true,
     badge:          null,
     badgeIcon:      null,
   },
@@ -79,6 +80,8 @@ export const MODE_PROFILES = {
     multiFrame:     1,
     vignette:       false,
     proControls:    false,
+    isVideo:        true,
+    slowMotion:     true,   // request high framerate from camera stream
     badge:          'Câmera lenta',
     badgeIcon:      '⏱',
   },
@@ -88,6 +91,9 @@ export const MODE_PROFILES = {
     multiFrame:     1,
     vignette:       false,
     proControls:    false,
+    isVideo:        true,
+    timelapse:      true,        // canvas interval-based recording
+    timelapseMs:    1000,        // ms between captured frames (30x speedup at 30fps output)
     badge:          'Time-lapse',
     badgeIcon:      '⏩',
   },

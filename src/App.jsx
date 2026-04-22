@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useCamera } from './hooks/useCamera';
 import { useBackButton } from './hooks/useBackButton';
 import { useSettings } from './hooks/useSettings';
@@ -16,6 +16,9 @@ import Settings from './components/Settings/Settings';
 import WhatsNew, { shouldShowWhatsNew } from './components/WhatsNew/WhatsNew';
 import MoreModes, { MORE_MODES } from './components/MoreModes/MoreModes';
 import ProControls from './components/ProControls/ProControls';
+import VideoModeControls from './components/VideoModeControls/VideoModeControls';
+import PanoramaOverlay from './components/PanoramaOverlay/PanoramaOverlay';
+import DocumentOverlay from './components/DocumentOverlay/DocumentOverlay';
 import LensSelector from './components/LensSelector/LensSelector';
 
 import styles from './App.module.css';
@@ -40,6 +43,16 @@ export default function App() {
   const [proWB, setProWB] = useState(5500);
   const [proISO, setProISO] = useState(0);
   const [proShutter, setProShutter] = useState(0);
+
+  // Slow-motion / time-lapse mode controls
+  const [slowMotionFps, setSlowMotionFps] = useState(0);     // 0 = auto
+  const [timelapseMs, setTimelapseMs]     = useState(1000);  // ms between frames
+
+  // Panorama mode state
+  const [isPanoCapturing, setIsPanoCapturing] = useState(false);
+  const [panoFrameCount, setPanoFrameCount]   = useState(0);
+  const panoFramesRef   = useRef([]);  // array of ImageBitmap
+  const panoIntervalRef = useRef(null);
 
   const { settings, updateSetting, resetSettings } = useSettings();
 
@@ -137,12 +150,106 @@ export default function App() {
     ...settings,
     filterOverrideCSS: modeFilterCSS,
     multiFrameCount:   modeProfile.multiFrame,
+    slowMotion:        modeProfile.slowMotion  ?? false,
+    slowMotionFps:     modeProfile.slowMotion  ? slowMotionFps : 0,
+    timelapse:         modeProfile.timelapse   ?? false,
+    timelapseMs:       modeProfile.timelapse   ? timelapseMs   : 1000,
     ...(modeProfile.captureQuality ? { photoQuality: modeProfile.captureQuality } : {}),
   });
 
   // In video mode: toggle recording. Otherwise: capture photo (or cancel timer)
+  // Panorama: toggle sweep capture
   const handleCapture = useCallback(() => {
-    if (activeMode === 'video') {
+    if (activeMode === 'panorama') {
+      if (isPanoCapturing) {
+        // Stop sweep and stitch
+        clearInterval(panoIntervalRef.current);
+        panoIntervalRef.current = null;
+        setIsPanoCapturing(false);
+        const frames = panoFramesRef.current;
+        panoFramesRef.current = [];
+        setPanoFrameCount(0);
+        if (frames.length < 2) { frames.forEach((bm) => bm.close?.()); return; }
+        // Stitch horizontally
+        const fw = frames[0].width;
+        const fh = frames[0].height;
+        const stride = Math.round(fw * 0.65); // 35% overlap
+        const outW = fw + (frames.length - 1) * stride;
+        const useOC = typeof OffscreenCanvas !== 'undefined';
+        const canvas = useOC
+          ? new OffscreenCanvas(outW, fh)
+          : (() => { const c = document.createElement('canvas'); c.width = outW; c.height = fh; return c; })();
+        const ctx = canvas.getContext('2d');
+        frames.forEach((bm, i) => {
+          ctx.drawImage(bm, i * stride, 0);
+          bm.close?.();
+        });
+        const finalize = (blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `panorama_${Date.now()}.jpg`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        };
+        if (useOC) {
+          canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 }).then(finalize);
+        } else {
+          canvas.toBlob(finalize, 'image/jpeg', 0.92);
+        }
+      } else {
+        // Start sweep
+        panoFramesRef.current = [];
+        setPanoFrameCount(0);
+        setIsPanoCapturing(true);
+        const captureFrame = async () => {
+          const video = videoRef.current;
+          if (!video || video.readyState < 2) return;
+          const vw = video.videoWidth  || 1280;
+          const vh = video.videoHeight || 720;
+          try {
+            const bm = await createImageBitmap(video, 0, 0, vw, vh);
+            panoFramesRef.current.push(bm);
+            const count = panoFramesRef.current.length;
+            setPanoFrameCount(count);
+            if (count >= 8) {
+              // Auto-stop at max
+              clearInterval(panoIntervalRef.current);
+              panoIntervalRef.current = null;
+              // re-trigger stop via state — schedule for next tick
+              setIsPanoCapturing(false);
+              const frames = panoFramesRef.current;
+              panoFramesRef.current = [];
+              setPanoFrameCount(0);
+              const fw2 = frames[0].width;
+              const fh2 = frames[0].height;
+              const stride2 = Math.round(fw2 * 0.65);
+              const outW2 = fw2 + (frames.length - 1) * stride2;
+              const useOC2 = typeof OffscreenCanvas !== 'undefined';
+              const c2 = useOC2
+                ? new OffscreenCanvas(outW2, fh2)
+                : (() => { const cc = document.createElement('canvas'); cc.width = outW2; cc.height = fh2; return cc; })();
+              const ctx2 = c2.getContext('2d');
+              frames.forEach((bm2, i) => { ctx2.drawImage(bm2, i * stride2, 0); bm2.close?.(); });
+              const done = (blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `panorama_${Date.now()}.jpg`; a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+              };
+              if (useOC2) c2.convertToBlob({ type: 'image/jpeg', quality: 0.92 }).then(done);
+              else c2.toBlob(done, 'image/jpeg', 0.92);
+            }
+          } catch (_) {}
+        };
+        captureFrame(); // capture first frame immediately
+        panoIntervalRef.current = setInterval(captureFrame, 400);
+      }
+      return;
+    }
+    if (modeProfile.isVideo) {
       if (isRecording) stopRecording();
       else startRecording();
     } else if (timerCount !== null) {
@@ -150,7 +257,8 @@ export default function App() {
     } else {
       capturePhoto();
     }
-  }, [activeMode, isRecording, timerCount, stopRecording, startRecording, cancelTimer, capturePhoto]);
+  }, [activeMode, isPanoCapturing, modeProfile.isVideo, isRecording, timerCount,
+      videoRef, stopRecording, startRecording, cancelTimer, capturePhoto]);
 
   // Android hardware back button — close top-level overlays
   useBackButton(showMoreModes,  () => setShowMoreModes(false));
@@ -229,6 +337,11 @@ export default function App() {
         vignette={modeProfile.vignette}
         modeBadge={modeProfile.badge}
         modeBadgeIcon={modeProfile.badgeIcon}
+        extraOverlay={
+          activeMode === 'documento' ? <DocumentOverlay /> :
+          activeMode === 'panorama'  ? <PanoramaOverlay isCapturing={isPanoCapturing} frameCount={panoFrameCount} /> :
+          null
+        }
       />
 
       <FlashOverlay isFlashing={isFlashing} />
@@ -262,6 +375,18 @@ export default function App() {
             onSelect={selectCamera}
           />
 
+          {/* Slow-motion / Time-lapse controls */}
+          {(activeMode === 'lento' || activeMode === 'timelapse') && (
+            <VideoModeControls
+              mode={activeMode}
+              slowMotionFps={slowMotionFps}
+              timelapseMs={timelapseMs}
+              onFpsChange={setSlowMotionFps}
+              onIntervalChange={setTimelapseMs}
+              isRecording={isRecording}
+            />
+          )}
+
           {/* PRO mode manual controls */}
           {activeMode === 'pro' && (
             <ProControls
@@ -288,7 +413,7 @@ export default function App() {
             isRecording={isRecording}
             recordingTime={recordingTime}
             timerCount={timerCount}
-            activeMode={activeMode}
+            isVideoMode={modeProfile.isVideo}
           />
         </div>
       </div>

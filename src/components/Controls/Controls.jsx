@@ -23,9 +23,9 @@ export default function Controls({
   isRecording,
   recordingTime,
   timerCount,
-  activeMode,
+  isVideoMode,
 }) {
-  const isVideoMode = activeMode === 'video';
+  // isVideoMode is passed directly from the parent (modeProfile.isVideo)
 
   // Determine capture button visual state
   let btnVariant = 'photo';

@@ -24,6 +24,7 @@ export default function Camera({
   vignette,
   modeBadge,
   modeBadgeIcon,
+  extraOverlay,
 }) {
   const videoStyle = {
     transform: `${facingMode === 'user' ? 'scaleX(-1) ' : ''}scale(${zoom})`,
@@ -118,6 +119,9 @@ export default function Camera({
 
       {/* Camera switch fade overlay */}
       {isSwitching && <div className={styles.switchOverlay} aria-hidden="true" />}
+
+      {/* Mode-specific overlay (panorama guide, document frame, etc.) */}
+      {!error && extraOverlay}
 
       {/* Timer countdown */}
       {timerCount !== null && timerCount > 0 && (
