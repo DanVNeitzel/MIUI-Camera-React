@@ -408,7 +408,14 @@ export function useCamera({
     isCapturingRef.current = true;
     setIsCapturing(true);
 
-    if (flashModeRef.current === 'on') await applyTorch(true);
+    if (flashModeRef.current === 'on') {
+      await applyTorch(true);
+      // Aguarda o sensor da câmera se adaptar à luz do flash antes de capturar
+      await new Promise((res) => setTimeout(res, 150));
+    }
+
+    // Dispara o overlay de flash no momento exato da captura
+    setIsFlashing(true);
 
     try {
       const video = videoRef.current;
@@ -481,7 +488,6 @@ export function useCamera({
       console.error('Erro ao capturar foto:', err);
     } finally {
       if (flashModeRef.current === 'on') await applyTorch(false);
-      setIsFlashing(true);
       setTimeout(() => {
         setIsFlashing(false);
         isCapturingRef.current = false;
