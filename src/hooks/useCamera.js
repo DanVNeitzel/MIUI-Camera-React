@@ -412,7 +412,28 @@ export function useCamera({
     setIsCapturing(true);
     const wasLocked = focusLockedRef.current;
 
+    // Determina se o flash deve acender ANTES de iniciar a captura
+    // 'on'   → sempre acende
+    // 'auto' → acende se a cena estiver escura (luminância média < 30%)
+    let needsFlash = false;
     if (flashModeRef.current === 'on') {
+      needsFlash = true;
+    } else if (flashModeRef.current === 'auto' && videoRef.current) {
+      try {
+        const sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width = 32; sampleCanvas.height = 32;
+        const sampleCtx = sampleCanvas.getContext('2d');
+        sampleCtx.drawImage(videoRef.current, 0, 0, 32, 32);
+        const px = sampleCtx.getImageData(0, 0, 32, 32).data;
+        let lum = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          lum += (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
+        }
+        needsFlash = (lum / (px.length / 4)) < 0.30;
+      } catch (_) { needsFlash = false; }
+    }
+
+    if (needsFlash) {
       await applyTorch(true);
       // Aguarda o sensor da câmera se adaptar à luz do flash antes de capturar
       await new Promise((res) => setTimeout(res, 150));
@@ -497,8 +518,10 @@ export function useCamera({
     } catch (err) {
       console.error('Erro ao capturar foto:', err);
     } finally {
-      if (flashModeRef.current === 'on') await applyTorch(false);
+      // O torch apaga APÓS a animação do overlay (350 ms) para que o LED
+      // permaneça aceso durante todo o período de flash visível ao usuário.
       setTimeout(() => {
+        if (needsFlash) applyTorch(false);
         setIsFlashing(false);
         isCapturingRef.current = false;
         setIsCapturing(false);
