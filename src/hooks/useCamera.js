@@ -690,10 +690,22 @@ export function useCamera({
     try {
       const caps = track.getCapabilities();
       const adv = {};
-      if (caps.pointOfInterest) adv.pointOfInterest = { x: x / 100, y: y / 100 };
-      // Lock focus: prefer manual, fallback to single-shot
-      if (caps.focusMode?.includes('manual')) adv.focusMode = 'manual';
-      else if (caps.focusMode?.includes('single-shot')) adv.focusMode = 'single-shot';
+
+      // pointOfInterest define ONDE focar — funciona com continuous e single-shot,
+      // mas NÃO com manual (manual ignora o ponto e trava na posição atual → embaçado)
+      if (caps.pointOfInterest) {
+        adv.pointOfInterest = { x: x / 100, y: y / 100 };
+      }
+
+      // single-shot: autofoca uma vez no ponto e para — é o "focus lock" correto.
+      // manual sem focusDistance trava na posição atual (causa embaçamento).
+      if (caps.focusMode?.includes('single-shot')) {
+        adv.focusMode = 'single-shot';
+      } else if (caps.focusMode?.includes('continuous')) {
+        // Fallback: continuous com pointOfInterest foca na região correta
+        adv.focusMode = 'continuous';
+      }
+
       if (caps.exposureMode?.includes('continuous')) adv.exposureMode = 'continuous';
       if (caps.exposureCompensation) adv.exposureCompensation = 0;
       if (Object.keys(adv).length > 0) await track.applyConstraints({ advanced: [adv] });
