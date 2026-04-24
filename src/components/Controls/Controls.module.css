@@ -33,6 +33,13 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  animation: thumbReveal 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes thumbReveal {
+  0%   { opacity: 0;   transform: scale(1.18); }
+  55%  { opacity: 1;   transform: scale(0.97); }
+  100% { opacity: 1;   transform: scale(1);    }
 }
 
 .thumbnailEmpty {

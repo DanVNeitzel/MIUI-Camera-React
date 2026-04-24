@@ -13,6 +13,25 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Drag handle (swipe-to-close) ── */
+.dragHandle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 4px;
+  flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.dragHandleBar {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 2px;
+}
+
 /* ── Header (grid view) ── */
 .header {
   display: flex;

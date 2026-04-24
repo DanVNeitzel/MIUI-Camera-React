@@ -4,10 +4,28 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.0.8';
+export const LATEST_VERSION = 'v1.0.9';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.0.9',
+    date: 'Abril 2026',
+    changes: [
+      'Feedback háptico: vibração ao capturar foto (30 ms), travar foco (duplo pulso 25+50+25 ms), trocar câmera, flash e timer',
+      'Vibração ao mudar de modo pelo seletor horizontal',
+      'Flash: sensor aguarda 150 ms após acender o torch antes de capturar — fotos com flash mais claras e corretas',
+      'Flash: overlay branco dispara no exato momento da captura (não mais após)',
+      'Troca de câmera: animação de flip 3D em perspectiva (rotateY) no lugar do fade simples',
+      'Slider de exposição movido para posição fixa na lateral direita — não sobreposta ao dedo',
+      'Badge de zoom central durante gesto de pinça — mostra o valor em tempo real (ex: 2.4×)',
+      'Thumbnail da galeria: animação de reveal ao capturar nova foto (scale + fade)',
+      'Controles de modo (Pro, Vídeo lento, Time-lapse) animam ao entrar em qualquer modo',
+      'Galeria: barra de arraste no topo; arrastar para baixo > 80 px fecha com efeito de físhico',
+      'Toast de aviso quando o armazenamento (IndexedDB) está cheio — antes o erro era silenciado',
+      'Foco travado é liberado automaticamente 2 s após cada captura',
+    ],
+  },
   {
     version: 'v1.0.8',
     date: 'Abril 2026',

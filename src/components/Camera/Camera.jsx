@@ -2,6 +2,12 @@ import { useRef } from 'react';
 import styles from './Camera.module.css';
 import GridOverlay from '../GridOverlay/GridOverlay';
 
+function formatZoom(zoom) {
+  if (zoom < 1) return `${zoom.toFixed(1)}×`;
+  if (Number.isInteger(zoom)) return `${zoom}×`;
+  return `${zoom.toFixed(1)}×`;
+}
+
 export default function Camera({
   videoRef,
   facingMode,
@@ -25,6 +31,7 @@ export default function Camera({
   modeBadge,
   modeBadgeIcon,
   extraOverlay,
+  isPinching,
 }) {
   const videoStyle = {
     transform: `${facingMode === 'user' ? 'scaleX(-1) ' : ''}scale(${zoom})`,
@@ -98,7 +105,6 @@ export default function Camera({
       {focusPoint && exposureRange && (
         <div
           className={styles.exposureControl}
-          style={{ left: `${Math.min(focusPoint.x + 10, 85)}%`, top: `${focusPoint.y}%` }}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
@@ -119,6 +125,13 @@ export default function Camera({
 
       {/* Camera switch fade overlay */}
       {isSwitching && <div className={styles.switchOverlay} aria-hidden="true" />}
+
+      {/* Pinch-zoom badge — mostra zoom atual durante o gesto de pinça */}
+      {isPinching && (
+        <div className={styles.pinchZoomBadge} aria-hidden="true">
+          {formatZoom(zoom)}
+        </div>
+      )}
 
       {/* Mode-specific overlay (panorama guide, document frame, etc.) */}
       {!error && extraOverlay}

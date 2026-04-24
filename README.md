@@ -79,7 +79,7 @@ src/
 | **Seletor de lente** | Detecta câmeras 0.5× / 1× / 2× / 3× automaticamente pelo label |
 | **Tap-to-focus** | `track.applyConstraints` com `pointOfInterest` — anel amarelo animado; EV zerado automaticamente ao focar |
 | **Focus lock** | Toque longo (650 ms) trava o foco no ponto — anel branco com ícone de cadeado; toque normal destrava |
-| **Slider de exposição** | Aparece ao lado do ponto de foco, aplica `exposureCompensation` via API |
+| **Slider de exposição** | Posição fixa na lateral direita do visor, aplica `exposureCompensation` via API |
 | **Zoom** | Pinch-to-zoom + botões preset + slider fino (0.5× a 8×) |
 | **Flash** | Cicla OFF → ON → AUTO; torch real via `applyConstraints` |
 | **Timer** | 0 / 3 / 5 / 10 segundos com contagem regressiva na tela |
@@ -121,9 +121,12 @@ src/
 | Funcionalidade | Detalhes |
 |---|---|
 | **Botão Voltar do Android** | Stack LIFO via `popstate` — fecha galeria, configurações, modais e sheets em cascata |
+| **Feedback háptico** | Vibração em capturas, travamento de foco, troca de câmera, flash, timer e mudança de modo |
 | **Modal "O que há de novo"** | Exibido automaticamente na primeira abertura de cada versão, com animação de entrada e saída |
 | **Acessibilidade do modal** | `role="dialog"`, `aria-modal`, `aria-labelledby` e foco movido para dentro ao abrir |
 | **Atalho de captura** | Botões de volume (Vol + / Vol −), Espaço ou Enter disparam a câmera; habilitável nas configurações |
+| **Toast de armazenamento** | Aviso quando o IndexedDB está cheio e a foto não pôde ser persistida |
+| **Galeria: swipe para fechar** | Arrastar para baixo > 80 px fecha a galeria com efeito físico de drag |
 
 ### Configurações
 | Opção | Detalhes |
@@ -166,6 +169,19 @@ Inspirado no MIUI Camera da Xiaomi:
 ---
 
 ## 📦 Changelog
+
+### v1.0.9 — Abril 2026
+- Feedback háptico: vibração ao capturar foto (30 ms), travar foco (duplo pulso), trocar câmera, flash, timer e mudar de modo
+- Flash: sensor aguarda 150 ms após acender o torch antes de capturar — fotos com flash mais claras
+- Flash: overlay branco dispara no exato momento da captura
+- Troca de câmera: animação de flip 3D em perspectiva no lugar do fade simples
+- Slider de exposição movido para posição fixa na lateral direita — não sobreposto ao dedo
+- Badge de zoom central durante gesto de pinça — mostra o valor em tempo real
+- Thumbnail da galeria: animação de reveal ao capturar nova foto
+- Controles de modo (Pro, Vídeo lento, Time-lapse) animam ao entrar no modo
+- Galeria: arrastar para baixo fecha com efeito de arrasto físico
+- Toast de aviso quando o armazenamento (IndexedDB) está cheio
+- Foco travado liberado automaticamente 2 s após cada captura
 
 ### v1.0.8 — Abril 2026
 - Modo Panorama: captura por varredura (até 8 frames) com costura horizontal automática e 35% de sobreposição — exportado como JPEG

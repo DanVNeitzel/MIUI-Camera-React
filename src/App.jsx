@@ -146,6 +146,8 @@ export default function App() {
     exposureRange,
     setExposure,
     applyProSettings,
+    isPinching,
+    storageError,
   } = useCamera({
     ...settings,
     filterOverrideCSS: modeFilterCSS,
@@ -315,6 +317,11 @@ export default function App() {
           Sem conexão — modo offline
         </div>
       )}
+      {storageError && (
+        <div className={styles.storageErrorToast} role="alert" aria-live="assertive">
+          {storageError}
+        </div>
+      )}
       <Camera
         videoRef={videoRef}
         facingMode={facingMode}
@@ -337,6 +344,7 @@ export default function App() {
         vignette={modeProfile.vignette}
         modeBadge={modeProfile.badge}
         modeBadgeIcon={modeProfile.badgeIcon}
+        isPinching={isPinching}
         extraOverlay={
           activeMode === 'documento' ? <DocumentOverlay /> :
           activeMode === 'panorama'  ? <PanoramaOverlay isCapturing={isPanoCapturing} frameCount={panoFrameCount} /> :
@@ -375,31 +383,33 @@ export default function App() {
             onSelect={selectCamera}
           />
 
-          {/* Slow-motion / Time-lapse controls */}
-          {(activeMode === 'lento' || activeMode === 'timelapse') && (
-            <VideoModeControls
-              mode={activeMode}
-              slowMotionFps={slowMotionFps}
-              timelapseMs={timelapseMs}
-              onFpsChange={setSlowMotionFps}
-              onIntervalChange={setTimelapseMs}
-              isRecording={isRecording}
-            />
-          )}
+          {/* Slow-motion / Time-lapse + PRO controls — animated on mode change */}
+          <div key={activeMode} className={styles.modeControls}>
+            {(activeMode === 'lento' || activeMode === 'timelapse') && (
+              <VideoModeControls
+                mode={activeMode}
+                slowMotionFps={slowMotionFps}
+                timelapseMs={timelapseMs}
+                onFpsChange={setSlowMotionFps}
+                onIntervalChange={setTimelapseMs}
+                isRecording={isRecording}
+              />
+            )}
 
-          {/* PRO mode manual controls */}
-          {activeMode === 'pro' && (
-            <ProControls
-              ev={proEV}
-              wb={proWB}
-              iso={proISO}
-              shutter={proShutter}
-              onEvChange={setProEV}
-              onWbChange={setProWB}
-              onIsoChange={(v) => { setProISO(v); applyProSettings(v, proShutter); }}
-              onShutterChange={(v) => { setProShutter(v); applyProSettings(proISO, v); }}
+            {/* PRO mode manual controls */}
+            {activeMode === 'pro' && (
+              <ProControls
+                ev={proEV}
+                wb={proWB}
+                iso={proISO}
+                shutter={proShutter}
+                onEvChange={setProEV}
+                onWbChange={setProWB}
+                onIsoChange={(v) => { setProISO(v); applyProSettings(v, proShutter); }}
+                onShutterChange={(v) => { setProShutter(v); applyProSettings(proISO, v); }}
             />
           )}
+          </div>{/* end modeControls */}
 
           <ModeSelector activeMode={isExtraMode ? 'mais' : activeMode} onModeChange={handleModeChange} extraModeActive={isExtraMode} />
           <Controls

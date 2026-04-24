@@ -43,7 +43,7 @@ export default function Controls({
         disabled={photosCount === 0}
       >
         {capturedPhoto ? (
-          <img src={capturedPhoto} alt="Última foto" className={styles.thumbnailImg} />
+          <img key={capturedPhoto} src={capturedPhoto} alt="Última foto" className={styles.thumbnailImg} />
         ) : (
           <div className={styles.thumbnailEmpty}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">

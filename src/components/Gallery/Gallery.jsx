@@ -376,6 +376,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  // Swipe-down-to-close
+  const swipeStartY = useRef(null);
+  const [swipeDelta, setSwipeDelta] = useState(0);
   const [favorites, setFavorites] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('gallery-favorites') || '[]')); }
     catch { return new Set(); }
@@ -580,8 +583,39 @@ export default function Gallery({ photos, onClose, onDelete }) {
     viewerZoomRef.current = 1; viewerPanRef.current = { x: 0, y: 0 };
   }, [selectedIndex]);
 
+  // Swipe-down handlers (arraste para fechar — apenas na view de grade)
+  const handleSwipeStart = useCallback((e) => {
+    if (selectedPhoto || selectMode) return;
+    swipeStartY.current = e.touches[0].clientY;
+  }, [selectedPhoto, selectMode]);
+
+  const handleSwipeMove = useCallback((e) => {
+    if (swipeStartY.current === null) return;
+    const delta = Math.max(0, e.touches[0].clientY - swipeStartY.current);
+    setSwipeDelta(delta);
+  }, []);
+
+  const handleSwipeEnd = useCallback(() => {
+    if (swipeDelta > 80) {
+      onClose();
+    } else {
+      setSwipeDelta(0);
+    }
+    swipeStartY.current = null;
+  }, [swipeDelta, onClose]);
+
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Galeria">
+    <div
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Galeria"
+      style={swipeDelta > 0 ? {
+        transform: `translateY(${swipeDelta * 0.5}px)`,
+        opacity: Math.max(0.25, 1 - swipeDelta / 260),
+        transition: 'none',
+      } : { transition: 'transform 0.3s ease, opacity 0.3s ease' }}
+    >
 
       {selectedPhoto ? (
         <div className={styles.viewer}>
@@ -630,6 +664,16 @@ export default function Gallery({ photos, onClose, onDelete }) {
         </div>
       ) : (
         <>
+          {/* Drag handle — arraste para baixo para fechar */}
+          <div
+            className={styles.dragHandle}
+            onTouchStart={handleSwipeStart}
+            onTouchMove={handleSwipeMove}
+            onTouchEnd={handleSwipeEnd}
+            aria-hidden="true"
+          >
+            <div className={styles.dragHandleBar} />
+          </div>
           <div className={styles.header}>
             {selectMode ? (
               <>

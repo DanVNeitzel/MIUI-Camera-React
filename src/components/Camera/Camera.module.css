@@ -123,21 +123,23 @@
   height: 100%;
 }
 
-/* Exposure control — vertical slider next to focus ring */
+/* Exposure control — fixed on right side */
 .exposureControl {
   position: absolute;
+  right: 12px;
+  top: 45%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  transform: translate(12px, -50%);
   z-index: 11;
   animation: fadeInExposure 0.25s ease;
 }
 
 @keyframes fadeInExposure {
-  from { opacity: 0; transform: translate(12px, -50%) scale(0.9); }
-  to   { opacity: 1; transform: translate(12px, -50%) scale(1); }
+  from { opacity: 0; transform: translateY(-50%) scale(0.9); }
+  to   { opacity: 1; transform: translateY(-50%) scale(1); }
 }
 
 .exposureSun {
@@ -185,20 +187,22 @@
   margin-left: -7.5px;
 }
 
-/* Camera switch overlay */
+/* Camera switch overlay — flip animation */
 .switchOverlay {
   position: absolute;
   inset: 0;
-  background: #000;
+  background: linear-gradient(135deg, #0d0d1a, #111827);
   z-index: 6;
   pointer-events: none;
-  animation: switchFade 0.45s ease forwards;
+  transform-origin: center center;
+  animation: switchFlip 0.52s ease-in-out forwards;
 }
 
-@keyframes switchFade {
-  0%   { opacity: 1; }
-  60%  { opacity: 1; }
-  100% { opacity: 0; }
+@keyframes switchFlip {
+  0%   { opacity: 1; transform: perspective(500px) rotateY(0deg);   }
+  38%  { opacity: 1; transform: perspective(500px) rotateY(90deg);  }
+  52%  { opacity: 1; transform: perspective(500px) rotateY(-90deg); }
+  100% { opacity: 0; transform: perspective(500px) rotateY(0deg);   }
 }
 
 /* Timer countdown overlay */
@@ -292,4 +296,30 @@
 @keyframes badgeFadeIn {
   from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+}
+
+/* Pinch-zoom badge — aparece durante gesto de pinça */
+.pinchZoomBadge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 200;
+  font-family: var(--font-sans);
+  letter-spacing: -0.5px;
+  padding: 10px 24px;
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 15;
+  animation: pinchBadgeIn 0.15s ease;
+}
+
+@keyframes pinchBadgeIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }

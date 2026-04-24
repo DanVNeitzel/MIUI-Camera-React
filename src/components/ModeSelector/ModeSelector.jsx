@@ -35,7 +35,7 @@ export default function ModeSelector({ activeMode, onModeChange, extraModeActive
               key={mode.id}
               ref={isActive ? activeRef : null}
               className={`${styles.modeBtn} ${isActive ? styles.modeActive : ''}`}
-              onClick={() => onModeChange(mode.id)}
+              onClick={() => { navigator.vibrate?.([12]); onModeChange(mode.id); }}
               aria-label={mode.label}
               aria-pressed={isActive}
             >

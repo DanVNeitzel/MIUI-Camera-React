@@ -208,6 +208,9 @@ export function useCamera({
   const [photos, setPhotos] = useState([]); // [{ id: number, url: string }]
   const [zoom, setZoom] = useState(1);
   const [isFlashing, setIsFlashing] = useState(false);
+  const [isPinching, setIsPinching] = useState(false);
+  const [storageError, setStorageError] = useState(null);
+  const storageErrorTimerRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -407,6 +410,7 @@ export function useCamera({
     if (!videoRef.current) return;
     isCapturingRef.current = true;
     setIsCapturing(true);
+    const wasLocked = focusLockedRef.current;
 
     if (flashModeRef.current === 'on') {
       await applyTorch(true);
@@ -414,7 +418,8 @@ export function useCamera({
       await new Promise((res) => setTimeout(res, 150));
     }
 
-    // Dispara o overlay de flash no momento exato da captura
+    // Vibração de shutter + overlay de flash no momento exato da captura
+    navigator.vibrate?.([30]);
     setIsFlashing(true);
 
     try {
@@ -483,7 +488,12 @@ export function useCamera({
             prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
           );
         })
-        .catch(() => {}); // keep provisional ID on failure
+        .catch(() => {
+          // Armazenamento cheio ou IndexedDB indisponível — avisa o usuário
+          if (storageErrorTimerRef.current) clearTimeout(storageErrorTimerRef.current);
+          setStorageError('Armazenamento cheio — foto salva temporariamente');
+          storageErrorTimerRef.current = setTimeout(() => setStorageError(null), 4000);
+        });
     } catch (err) {
       console.error('Erro ao capturar foto:', err);
     } finally {
@@ -493,6 +503,14 @@ export function useCamera({
         isCapturingRef.current = false;
         setIsCapturing(false);
       }, 350);
+      // Desbloqueia foco automaticamente 2s após a captura
+      if (wasLocked) {
+        setTimeout(() => {
+          setFocusPoint(null);
+          setFocusLocked(false);
+          focusLockedRef.current = false;
+        }, 2000);
+      }
     }
   }, [applyTorch]);
 
@@ -533,6 +551,7 @@ export function useCamera({
 
   // ── Camera switch ────────────────────────────────────────────────────────────
   const switchCamera = useCallback(() => {
+    navigator.vibrate?.([20]);
     setIsSwitching(true);
     setSelectedDeviceId(null); // reset to facingMode default
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
@@ -556,6 +575,7 @@ export function useCamera({
 
   // ── Flash toggle ─────────────────────────────────────────────────────────────
   const toggleFlashMode = useCallback(() => {
+    navigator.vibrate?.([12]);
     const cycle = ['off', 'on', 'auto'];
     setFlashMode((prev) => {
       const next = cycle[(cycle.indexOf(prev) + 1) % cycle.length];
@@ -566,6 +586,7 @@ export function useCamera({
 
   // ── Timer toggle ─────────────────────────────────────────────────────────────
   const toggleTimerDelay = useCallback(() => {
+    navigator.vibrate?.([12]);
     setTimerDelay((prev) => {
       const next = prev === 0 ? 3 : prev === 3 ? 5 : prev === 5 ? 10 : 0;
       timerDelayRef.current = next;
@@ -657,6 +678,7 @@ export function useCamera({
   // ── Focus lock (long-press) ──────────────────────────────────────────────────
   const lockFocusAt = useCallback(async (x, y) => {
     longPressDidFireRef.current = true;
+    navigator.vibrate?.([25, 50, 25]); // duplo pulso ao travar foco
     if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
     setFocusPoint({ x, y, id: Date.now() });
     setFocusLocked(true);
@@ -797,6 +819,7 @@ export function useCamera({
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       pinchStartDistRef.current = Math.hypot(dx, dy);
       pinchStartZoomRef.current = zoomRef.current;
+      setIsPinching(true);
     } else if (e.touches.length === 1 && !focusLockedRef.current) {
       // Single touch: start long-press timer for focus lock
       const rect = e.currentTarget.getBoundingClientRect();
@@ -838,6 +861,7 @@ export function useCamera({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    setIsPinching(false);
     pinchStartDistRef.current = null;
     pinchStartZoomRef.current = null;
   }, []);
@@ -881,5 +905,7 @@ export function useCamera({
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    isPinching,
+    storageError,
   };
 }

@@ -33,6 +33,27 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* Storage error toast */
+.storageErrorToast {
+  position: absolute;
+  bottom: calc(120px + var(--safe-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 149, 0, 0.92);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  padding: 6px 16px;
+  border-radius: 20px;
+  z-index: 100;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  animation: fadeInDown 0.25s ease;
+  text-align: center;
+}
+
 /* Overlay sits above the camera video */
 .uiOverlay {
   position: absolute;
@@ -81,4 +102,14 @@
   background: var(--color-overlay-bottom);
   pointer-events: none;
   z-index: -1;
+}
+
+/* Mode controls wrapper — animated on every mode change */
+.modeControls {
+  animation: modeControlsIn 0.22s ease;
+}
+
+@keyframes modeControlsIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
