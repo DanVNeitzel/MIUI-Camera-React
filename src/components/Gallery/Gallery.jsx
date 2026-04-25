@@ -469,6 +469,15 @@ export default function Gallery({ photos, onClose, onDelete, onLoadFull }) {
     setShowCloudModal(false);
   }, []);
 
+  // fullUrls precisa ser declarado antes dos callbacks que o referenciam
+  const [fullUrls,      setFullUrls]      = useState({});  // id → full-res URL (lazy-loaded from IDB)
+  const fullBlobUrlsRef = useRef([]);                       // rastrear blob: URLs para revoke no unmount
+
+  // Limpar URLs de blobs carregadas pelo viewer ao desmontar
+  useEffect(() => {
+    return () => fullBlobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+  }, []);
+
   const handleUploadToCloud = useCallback(async (photo) => {
     if (!cloudSession) return;
     setUploadingToCloud(true);
@@ -554,13 +563,6 @@ export default function Gallery({ photos, onClose, onDelete, onLoadFull }) {
   const [contextPhoto,      setContextPhoto]      = useState(null);
   const [contextIndex,      setContextIndex]      = useState(null);
   const [editedUrls,        setEditedUrls]        = useState({});
-  const [fullUrls,          setFullUrls]          = useState({});  // id → full-res URL (lazy-loaded from IDB)
-  const fullBlobUrlsRef = useRef([]);                               // rastrear blob: URLs para revoke no unmount
-
-  // Limpar URLs de blobs carregadas pelo viewer ao desmontar
-  useEffect(() => {
-    return () => fullBlobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
-  }, []);
 
   // ── Viewer zoom / pan / rotation ────────────────────────────────────────────────
   const [viewerZoom,     setViewerZoom]     = useState(1);
