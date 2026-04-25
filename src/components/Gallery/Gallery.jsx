@@ -410,7 +410,7 @@ function ContextMenu({ photo, isFavorite, isCloud, cloudLoggedIn, onClose, onDow
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function Gallery({ photos, onClose, onDelete }) {
+export default function Gallery({ photos, onClose, onDelete, onLoadFull }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -431,6 +431,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const [uploadingToCloud, setUploadingToCloud] = useState(false);
   const [showCloudModal,  setShowCloudModal]  = useState(false);
   const [uploadSuccess,   setUploadSuccess]   = useState(false);
+  const [uploadingBatch,  setUploadingBatch]  = useState(false);
+  const [batchUploadDone, setBatchUploadDone] = useState(0);   // quantas foram enviadas
+  const [batchUploadTotal,setBatchUploadTotal]= useState(0);
 
   const activePhotos = cloudSource === 'cloud' ? cloudPhotos : photos;
 
@@ -471,8 +474,17 @@ export default function Gallery({ photos, onClose, onDelete }) {
     setUploadingToCloud(true);
     setCloudError(null);
     try {
-      const url = photo.url; // usa a URL original (base64 ou blob)
-      const dataUrl = await toBase64DataUrl(url);
+      // Se for thumbnail, carregar imagem completa antes de enviar
+      let sourceUrl = fullUrls[photo.id] || photo.url;
+      if (photo.isThumb && !fullUrls[photo.id] && onLoadFull) {
+        const full = await onLoadFull(photo.id);
+        if (full) {
+          if (full.url.startsWith('blob:')) fullBlobUrlsRef.current.push(full.url);
+          setFullUrls((prev) => ({ ...prev, [photo.id]: full.url }));
+          sourceUrl = full.url;
+        }
+      }
+      const dataUrl = await toBase64DataUrl(sourceUrl);
       await cloudUploadPhoto(dataUrl, photo.mimeType, photo.createdAt);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 2500);
@@ -483,7 +495,44 @@ export default function Gallery({ photos, onClose, onDelete }) {
     } finally {
       setUploadingToCloud(false);
     }
-  }, [cloudSession, cloudSource, refreshCloudPhotos]);
+  }, [cloudSession, cloudSource, refreshCloudPhotos, fullUrls, onLoadFull]);
+
+  const handleBatchUploadToCloud = useCallback(async () => {
+    if (!cloudSession) return;
+    const photosToUpload = activePhotos.filter((p) => selectedIds.has(p.id));
+    if (photosToUpload.length === 0) return;
+    setUploadingBatch(true);
+    setBatchUploadDone(0);
+    setBatchUploadTotal(photosToUpload.length);
+    setCloudError(null);
+    let done = 0;
+    for (const photo of photosToUpload) {
+      try {
+        // Se for thumbnail, carregar imagem completa antes de enviar
+        let sourceUrl = fullUrls[photo.id] || photo.url;
+        if (photo.isThumb && !fullUrls[photo.id] && onLoadFull) {
+          const full = await onLoadFull(photo.id);
+          if (full) {
+            if (full.url.startsWith('blob:')) fullBlobUrlsRef.current.push(full.url);
+            setFullUrls((prev) => ({ ...prev, [photo.id]: full.url }));
+            sourceUrl = full.url;
+          }
+        }
+        const dataUrl = await toBase64DataUrl(sourceUrl);
+        await cloudUploadPhoto(dataUrl, photo.mimeType, photo.createdAt);
+        done++;
+        setBatchUploadDone(done);
+      } catch {
+        // continua nos próximos mesmo se um falhar
+      }
+    }
+    setUploadingBatch(false);
+    setUploadSuccess(true);
+    setTimeout(() => setUploadSuccess(false), 3000);
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    if (cloudSource === 'cloud') await refreshCloudPhotos();
+  }, [cloudSession, activePhotos, selectedIds, cloudSource, refreshCloudPhotos, fullUrls, onLoadFull]);
 
   const handleCloudDelete = useCallback(async (id) => {
     try {
@@ -505,6 +554,13 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const [contextPhoto,      setContextPhoto]      = useState(null);
   const [contextIndex,      setContextIndex]      = useState(null);
   const [editedUrls,        setEditedUrls]        = useState({});
+  const [fullUrls,          setFullUrls]          = useState({});  // id → full-res URL (lazy-loaded from IDB)
+  const fullBlobUrlsRef = useRef([]);                               // rastrear blob: URLs para revoke no unmount
+
+  // Limpar URLs de blobs carregadas pelo viewer ao desmontar
+  useEffect(() => {
+    return () => fullBlobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+  }, []);
 
   // ── Viewer zoom / pan / rotation ────────────────────────────────────────────────
   const [viewerZoom,     setViewerZoom]     = useState(1);
@@ -517,7 +573,20 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const lastTapRef     = useRef(0);      // timestamp of last tap (double-tap detection)
 
   const selectedPhoto = selectedIndex !== null ? activePhotos[selectedIndex] : null;
-  const displayUrl = (photo) => (photo && editedUrls[photo.id]) || (photo && photo.url);
+  const displayUrl = (photo) => (photo && editedUrls[photo.id]) || (photo && fullUrls[photo.id]) || (photo && photo.url);
+
+  // Quando o viewer abre para um thumbnail, carregar imagem em resolução completa
+  useEffect(() => {
+    if (!selectedPhoto || !selectedPhoto.isThumb || fullUrls[selectedPhoto.id] || !onLoadFull) return;
+    let cancelled = false;
+    onLoadFull(selectedPhoto.id).then((full) => {
+      if (!cancelled && full) {
+        if (full.url && full.url.startsWith('blob:')) fullBlobUrlsRef.current.push(full.url);
+        setFullUrls((prev) => ({ ...prev, [selectedPhoto.id]: full.url }));
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedPhoto?.id]); // eslint-disable-line
 
   const toggleFavorite = useCallback((id) => {
     setFavorites((prev) => {
@@ -881,7 +950,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
                     {...makeLongPressHandlers(photo, index)}
                     aria-label={'Foto ' + (index + 1) + (isSelected ? ' (selecionada)' : '')}
                   >
-                    <img src={photo.url} alt={'Foto ' + (index + 1)} className={styles.gridThumb} />
+                    <img src={photo.url} alt={'Foto ' + (index + 1)} className={styles.gridThumb} loading="lazy" decoding="async" />
                     {isFav && !selectMode && !photo.isCloud && <span className={styles.favBadge}>★</span>}
                     {photo.isCloud && !selectMode && <span className={styles.cloudBadge}><CloudIcon size={12} /></span>}
                     {selectMode && (
@@ -906,11 +975,38 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
           {selectMode && count > 0 && (
             <div className={styles.batchBar}>
-              <button className={styles.batchBtnDownload} onClick={() => setShowDownloadModal(true)} disabled={isZipping}>
-                <DownloadIcon /><span>{isZipping ? 'Comprimindo…' : 'Baixar ' + count}</span>
-              </button>
-              <button className={styles.batchBtnDelete} onClick={() => setShowDeleteModal(true)}>
-                <DeleteIcon /><span>Excluir {count}</span>
+              <div className={styles.batchActions}>
+                <button className={styles.batchBtnDownload} onClick={() => setShowDownloadModal(true)} disabled={isZipping || uploadingBatch}>
+                  <DownloadIcon />
+                  <span>{isZipping ? 'Comprimindo…' : 'Baixar'}</span>
+                  <span className={styles.batchBtnCount}>{count}</span>
+                </button>
+
+                {cloudSession && cloudSource === 'local' && (
+                  <button
+                    className={styles.batchBtnCloud}
+                    onClick={handleBatchUploadToCloud}
+                    disabled={uploadingBatch || isZipping}
+                  >
+                    <CloudIcon size={20} />
+                    <span>
+                      {uploadingBatch
+                        ? `${batchUploadDone}/${batchUploadTotal}`
+                        : 'Nuvem'}
+                    </span>
+                    <span className={styles.batchBtnCount}>{count}</span>
+                  </button>
+                )}
+
+                <button className={styles.batchBtnDelete} onClick={() => setShowDeleteModal(true)} disabled={uploadingBatch}>
+                  <DeleteIcon />
+                  <span>Excluir</span>
+                  <span className={styles.batchBtnCount}>{count}</span>
+                </button>
+              </div>
+
+              <button className={styles.batchBtnCancel} onClick={toggleSelectMode} disabled={uploadingBatch}>
+                Cancelar seleção
               </button>
             </div>
           )}

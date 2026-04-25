@@ -4,6 +4,10 @@ import {
   savePhotoBase64 as idbSavePhotoBase64,
   loadPhotos as idbLoadPhotos,
   deletePhoto as idbDeletePhoto,
+  saveThumb as idbSaveThumb,
+  loadAllThumbs as idbLoadAllThumbs,
+  loadPhotoFull as idbLoadPhotoFull,
+  deleteThumb as idbDeleteThumb,
 } from '../utils/photoDB';
 import { FILTER_CSS } from '../utils/filterMap';
 
@@ -137,6 +141,49 @@ async function stackFrames(video, vw, vh, canvasW, canvasH, cssFilter, isFront, 
     : new Promise((res) =>
         mime === 'image/png' ? out.toBlob(res, mime) : out.toBlob(res, mime, quality)
       );
+}
+
+/**
+ * Gera um thumbnail pequeno (máx. maxPx px) a partir de um Blob.
+ * Retorna uma Data URL JPEG ou null em caso de falha.
+ */
+async function generateThumb(blob, maxPx = 320, quality = 0.55) {
+  const url = URL.createObjectURL(blob);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+/**
+ * Gera um thumbnail a partir de uma Data URL.
+ */
+async function generateThumbFromDataUrl(dataUrl, maxPx = 320, quality = 0.55) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
 }
 
 export function useCamera({
@@ -273,20 +320,66 @@ export function useCamera({
 
   // Load persisted photos from IndexedDB on mount
   useEffect(() => {
-    idbLoadPhotos()
-      .then((records) => {
-        const loaded = records.map((r) => {
-          // Fotos salvas como base64 usam Data URL diretamente
-          if (r.storageType === 'base64' || r.base64) {
-            return { id: r.id, url: r.base64, mimeType: r.mimeType || 'image/jpeg' };
+    (async () => {
+      try {
+        // ── Caminho rápido: carregar thumbnails (pequenos, sem blobs) ────────
+        const thumbs = await idbLoadAllThumbs();
+
+        if (thumbs.length > 0) {
+          setPhotos(thumbs);
+
+          // Verificar se há fotos sem thumbnail e gerá-los em background
+          const allRecords = await idbLoadPhotos();
+          const thumbIdSet = new Set(thumbs.map((t) => t.id));
+          for (const r of allRecords) {
+            if (thumbIdSet.has(r.id)) continue;
+            // Esta foto não tem thumbnail — gerar assincronamente
+            try {
+              const thumbDataUrl =
+                r.storageType === 'base64' || r.base64
+                  ? await generateThumbFromDataUrl(r.base64)
+                  : await generateThumb(r.blob);
+              if (!thumbDataUrl) continue;
+              await idbSaveThumb(r.id, thumbDataUrl, r.mimeType || 'image/jpeg', r.createdAt);
+              setPhotos((prev) => {
+                if (prev.some((p) => p.id === r.id)) return prev;
+                const entry = { id: r.id, url: thumbDataUrl, mimeType: r.mimeType || 'image/jpeg', createdAt: r.createdAt, isThumb: true };
+                // inserir na posição correta (mais novo primeiro)
+                const idx = prev.findIndex((p) => (p.createdAt || '') < (r.createdAt || ''));
+                return idx === -1 ? [...prev, entry] : [...prev.slice(0, idx), entry, ...prev.slice(idx)];
+              });
+            } catch {}
           }
-          const url = URL.createObjectURL(r.blob);
-          blobUrlsRef.current.push(url);
-          return { id: r.id, url, mimeType: (r.blob && r.blob.type) || r.mimeType || 'image/jpeg' };
-        });
-        setPhotos(loaded);
-      })
-      .catch(() => {});
+        } else {
+          // ── Primeira execução / migração: carregar fotos completas ──────────
+          const allRecords = await idbLoadPhotos();
+          const loaded = allRecords.map((r) => {
+            if (r.storageType === 'base64' || r.base64) {
+              return { id: r.id, url: r.base64, mimeType: r.mimeType || 'image/jpeg', createdAt: r.createdAt };
+            }
+            const url = URL.createObjectURL(r.blob);
+            blobUrlsRef.current.push(url);
+            return { id: r.id, url, mimeType: (r.blob && r.blob.type) || r.mimeType || 'image/jpeg', createdAt: r.createdAt };
+          });
+          setPhotos(loaded);
+
+          // Gerar thumbnails em background para todas as fotos existentes
+          for (const r of allRecords) {
+            (async () => {
+              try {
+                const thumbDataUrl =
+                  r.storageType === 'base64' || r.base64
+                    ? await generateThumbFromDataUrl(r.base64)
+                    : await generateThumb(r.blob);
+                if (thumbDataUrl) {
+                  await idbSaveThumb(r.id, thumbDataUrl, r.mimeType || 'image/jpeg', r.createdAt);
+                }
+              } catch {}
+            })();
+          }
+        }
+      } catch {}
+    })();
   }, []);
 
   // Cleanup all blob URLs and resources on unmount
@@ -521,6 +614,12 @@ export function useCamera({
             setPhotos((prev) =>
               prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
             );
+            // Gerar thumbnail em background
+            generateThumb(blob)
+              .then((thumbDataUrl) => {
+                if (thumbDataUrl) idbSaveThumb(savedId, thumbDataUrl, blob.type || 'image/jpeg', new Date().toISOString()).catch(() => {});
+              })
+              .catch(() => {});
           })
           .catch(() => {
             if (storageErrorTimerRef.current) clearTimeout(storageErrorTimerRef.current);
@@ -540,6 +639,12 @@ export function useCamera({
             setPhotos((prev) =>
               prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
             );
+            // Gerar thumbnail em background
+            generateThumb(blob)
+              .then((thumbDataUrl) => {
+                if (thumbDataUrl) idbSaveThumb(savedId, thumbDataUrl, blob.type || 'image/jpeg', new Date().toISOString()).catch(() => {});
+              })
+              .catch(() => {});
           })
           .catch(() => {
             // Armazenamento cheio ou IndexedDB indisponível — avisa o usuário
@@ -650,6 +755,22 @@ export function useCamera({
     });
   }, []);
 
+  // ── Load full photo for viewer (used when displaying a thumbnail) ───────────
+  const loadPhotoFull = useCallback(async (id) => {
+    try {
+      const r = await idbLoadPhotoFull(id);
+      if (!r) return null;
+      if (r.storageType === 'base64' || r.base64) {
+        return { id: r.id, url: r.base64, mimeType: r.mimeType || 'image/jpeg', createdAt: r.createdAt };
+      }
+      const url = URL.createObjectURL(r.blob);
+      blobUrlsRef.current.push(url);
+      return { id: r.id, url, mimeType: (r.blob && r.blob.type) || r.mimeType || 'image/jpeg', createdAt: r.createdAt };
+    } catch {
+      return null;
+    }
+  }, []);
+
   // ── Delete photo ─────────────────────────────────────────────────────────────
   const deletePhoto = useCallback(async (id) => {
     setPhotos((prev) => {
@@ -661,6 +782,7 @@ export function useCamera({
       return prev.filter((p) => p.id !== id);
     });
     await idbDeletePhoto(id).catch(() => {});
+    idbDeleteThumb(id).catch(() => {}); // remover thumbnail junto
   }, []);
 
   // ── Video recording ──────────────────────────────────────────────────────────
@@ -968,6 +1090,7 @@ export function useCamera({
     toggleFlashMode,
     toggleTimerDelay,
     deletePhoto,
+    loadPhotoFull,
     handleZoomChange,
     handleFocusTap,
     handleTouchStart,

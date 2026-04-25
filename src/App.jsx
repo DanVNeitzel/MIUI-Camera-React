@@ -136,6 +136,7 @@ export default function App() {
     toggleFlashMode,
     toggleTimerDelay,
     deletePhoto,
+    loadPhotoFull,
     handleZoomChange,
     focusLocked,
     handleFocusTap,
@@ -441,6 +442,7 @@ export default function App() {
           photos={photos}
           onClose={() => setShowGallery(false)}
           onDelete={deletePhoto}
+          onLoadFull={loadPhotoFull}
         />
       )}
 
