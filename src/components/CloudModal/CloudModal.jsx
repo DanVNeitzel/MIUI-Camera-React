@@ -44,10 +44,11 @@ export default function CloudModal({ session, onLogin, onLogout, onClose }) {
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const usernameRef = useRef(null);
 
-  const stats = session ? getCloudStats() : null;
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    if (!session) usernameRef.current?.focus();
+    if (!session) { usernameRef.current?.focus(); return; }
+    getCloudStats().then(setStats).catch(() => {});
   }, [session]);
 
   const handleLogin = async (e) => {
@@ -55,7 +56,7 @@ export default function CloudModal({ session, onLogin, onLogout, onClose }) {
     setError('');
     setLoading(true);
     try {
-      const result = cloudLogin(username.trim(), password);
+      const result = await cloudLogin(username.trim(), password);
       if (result.ok) {
         onLogin(result);
       } else {
