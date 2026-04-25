@@ -4,10 +4,23 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.1.0';
+export const LATEST_VERSION = 'v1.2.0';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.2.0',
+    date: 'Abril 2026',
+    changes: [
+      'Galeria: sistema de thumbnails — miniaturas de 320 px geradas automaticamente em background após cada captura, galeria abre instantaneamente sem travar',
+      'Galeria: viewer carrega imagem em resolução completa somente ao abrir a foto individualmente (lazy load)',
+      'Galeria: imagens no grid carregadas com loading=lazy e decoding=async — UI não bloqueia ao rolar',
+      'Galeria em Nuvem: armazenamento migrado de localStorage para IndexedDB — elimina o erro de cota ao enviar muitas fotos',
+      'Galeria em Nuvem: enviar para nuvem carrega automaticamente a imagem completa quando a fonte é um thumbnail',
+      'Galeria: multi-seleção — nova opção "Enviar selecionadas para Nuvem" na barra de lote',
+      'Galeria: upload em lote com contador de progresso (x de y enviadas)',
+    ],
+  },
   {
     version: 'v1.1.0',
     date: 'Abril 2026',

@@ -1,7 +1,7 @@
 # 📷 Camera MIUI — Câmera Xiaomi em React
 
 [![Deploy](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml/badge.svg)](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml)
-[![Version](https://img.shields.io/badge/versão-1.1.0-yellow)](#)
+[![Version](https://img.shields.io/badge/versão-1.2.0-yellow)](#)
 [![PWA](https://img.shields.io/badge/PWA-instalável-blue)](#)
 
 Aplicação React PWA que simula a interface da câmera MIUI (Xiaomi), com acesso real à câmera do dispositivo via Web API. Instalável como app nativo em Android e iOS.
@@ -107,6 +107,7 @@ src/
 | Funcionalidade | Detalhes |
 |---|---|
 | **Persistência** | Fotos salvas em IndexedDB — sobrevivem ao recarregamento |
+| **Thumbnails** | Miniaturas de 320 px geradas em background — galeria abre instantaneamente; imagem completa carregada só no viewer |
 | **Formato correto** | Extensão do arquivo reflete o formato real (`.jpg`, `.png`, `.webp`) |
 | **Galeria em Nuvem** | Login/cadastro com usuário e senha — fotos sincronizadas em nuvem local por conta |
 | **Seletor Local / Nuvem** | Alterna a origem das fotos exibidas na galeria |
@@ -120,7 +121,7 @@ src/
 | **Favoritos** | Marcação com ★, persistido no `localStorage`; fotos favoritadas **não podem ser excluídas** |
 | **Propriedades (EXIF)** | Câmera, lente, ISO, abertura, exposição, focal, GPS com link para Google Maps |
 | **Edição** | Rotação ±90°, controle de qualidade, salvar cópia |
-| **Multi-seleção** | Selecionar tudo, download em ZIP ou sequencial, exclusão em lote |
+| **Multi-seleção** | Selecionar tudo, download em ZIP ou sequencial, exclusão em lote, envio em lote para a Nuvem com contador de progresso |
 | **Proteção de favoritos** | Exclusão individual e em lote ignoram/bloqueiam fotos favoritadas |
 
 ### Interface & UX
@@ -176,6 +177,14 @@ Inspirado no MIUI Camera da Xiaomi:
 ---
 
 ## 📦 Changelog
+
+### v1.2.0 — Abril 2026
+- Galeria: sistema de thumbnails — miniaturas de 320 px geradas em background após cada captura, galeria abre instantaneamente sem travar
+- Galeria: viewer carrega a imagem completa somente ao abrir a foto individualmente (lazy load)
+- Galeria: imagens no grid com `loading=lazy` e `decoding=async` — UI não bloqueia ao rolar
+- Galeria em Nuvem: armazenamento migrado de `localStorage` para IndexedDB — elimina o erro de cota ao enviar muitas fotos
+- Galeria em Nuvem: upload de thumbnail carrega automaticamente a imagem completa antes de enviar
+- Galeria: multi-seleção — nova opção "Enviar selecionadas para Nuvem" na barra de lote com contador de progresso
 
 ### v1.1.0 — Abril 2026
 - Galeria em Nuvem: login/cadastro com usuário e senha — conta criada automaticamente no primeiro acesso
