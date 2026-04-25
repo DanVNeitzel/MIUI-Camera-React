@@ -138,6 +138,8 @@ export default function App() {
     deletePhoto,
     loadPhotoFull,
     handleZoomChange,
+    startCamera,
+    stopCamera,
     focusLocked,
     handleFocusTap,
     handleTouchStart,
@@ -266,7 +268,15 @@ export default function App() {
   // Android hardware back button — close top-level overlays
   useBackButton(showMoreModes,  () => setShowMoreModes(false));
   useBackButton(showSettings,   () => setShowSettings(false));
-  useBackButton(showGallery,    () => setShowGallery(false));
+  useBackButton(showGallery,    () => { setShowGallery(false); startCamera(); });
+
+  // Liberar câmera enquanto a galeria está aberta para economizar memória e bateria
+  useEffect(() => {
+    if (showGallery) {
+      stopCamera();
+    }
+    // startCamera é chamado explicitamente no onClose da galeria
+  }, [showGallery]); // eslint-disable-line
 
   // ─── Capture shortcut (volume / keyboard) ──────────────────────────────────
   // Android Chrome intercepts volume keys at the OS level in most contexts.
@@ -440,7 +450,7 @@ export default function App() {
       {showGallery && (
         <Gallery
           photos={photos}
-          onClose={() => setShowGallery(false)}
+          onClose={() => { setShowGallery(false); startCamera(); }}
           onDelete={deletePhoto}
           onLoadFull={loadPhotoFull}
         />

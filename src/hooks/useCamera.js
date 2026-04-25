@@ -469,6 +469,15 @@ export function useCamera({
     startCamera();
   }, [startCamera]);
 
+  // Para o stream da câmera sem desmontar o hook (ex: galeria aberta)
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+  }, []);
+
   // ── Torch (hardware LED flash) ──────────────────────────────────────────────
   const applyTorch = useCallback(async (on) => {
     if (!streamRef.current) return;
@@ -1092,6 +1101,8 @@ export function useCamera({
     deletePhoto,
     loadPhotoFull,
     handleZoomChange,
+    startCamera,
+    stopCamera,
     handleFocusTap,
     handleTouchStart,
     handleTouchMove,
