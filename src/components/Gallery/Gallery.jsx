@@ -664,8 +664,14 @@ export default function Gallery({ photos, onClose, onDelete, onLoadFull }) {
 
   const handleBatchDelete = async () => {
     setShowDeleteModal(false);
-    for (const id of selectedIds) {
-      if (!favorites.has(id)) await onDelete(id);
+    if (cloudSource === 'cloud') {
+      for (const id of selectedIds) {
+        await handleCloudDelete(id);
+      }
+    } else {
+      for (const id of selectedIds) {
+        if (!favorites.has(id)) await onDelete(id);
+      }
     }
     setSelectedIds(new Set());
     setSelectMode(false);
