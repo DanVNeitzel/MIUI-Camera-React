@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   savePhoto as idbSavePhoto,
+  savePhotoBase64 as idbSavePhotoBase64,
   loadPhotos as idbLoadPhotos,
   deletePhoto as idbDeletePhoto,
 } from '../utils/photoDB';
@@ -141,6 +142,7 @@ async function stackFrames(video, vw, vh, canvasW, canvasH, cssFilter, isFront, 
 export function useCamera({
   photoQuality       = 'high',
   saveFormat         = 'jpeg',
+  saveAsBase64       = false, // salva fotos como Data URL em vez de Blob
   videoResolution    = '1080p',
   filter             = 'none',
   filterOverrideCSS  = '',   // raw CSS string — overrides ID-based filter (used by modes)
@@ -199,6 +201,7 @@ export function useCamera({
   const filterRef              = useRef(filter);
   const photoQualityRef        = useRef(photoQuality);
   const saveFormatRef          = useRef(saveFormat);
+  const saveAsBase64Ref        = useRef(saveAsBase64);
   const videoResolutionRef     = useRef(videoResolution);
   const filterOverrideCSSRef   = useRef(filterOverrideCSS);
   const multiFrameCountRef     = useRef(multiFrameCount);
@@ -243,6 +246,7 @@ export function useCamera({
   useEffect(() => { filterRef.current            = filter;            }, [filter]);
   useEffect(() => { photoQualityRef.current       = photoQuality;      }, [photoQuality]);
   useEffect(() => { saveFormatRef.current         = saveFormat;        }, [saveFormat]);
+  useEffect(() => { saveAsBase64Ref.current       = saveAsBase64;      }, [saveAsBase64]);
   useEffect(() => { videoResolutionRef.current    = videoResolution;   }, [videoResolution]);
   useEffect(() => { filterOverrideCSSRef.current  = filterOverrideCSS; }, [filterOverrideCSS]);
   useEffect(() => { multiFrameCountRef.current    = multiFrameCount;   }, [multiFrameCount]);
@@ -272,9 +276,13 @@ export function useCamera({
     idbLoadPhotos()
       .then((records) => {
         const loaded = records.map((r) => {
+          // Fotos salvas como base64 usam Data URL diretamente
+          if (r.storageType === 'base64' || r.base64) {
+            return { id: r.id, url: r.base64, mimeType: r.mimeType || 'image/jpeg' };
+          }
           const url = URL.createObjectURL(r.blob);
           blobUrlsRef.current.push(url);
-          return { id: r.id, url, mimeType: r.blob.type || 'image/jpeg' };
+          return { id: r.id, url, mimeType: (r.blob && r.blob.type) || r.mimeType || 'image/jpeg' };
         });
         setPhotos(loaded);
       })
@@ -496,25 +504,50 @@ export function useCamera({
       }
 
       // Add photo to UI immediately with a provisional ID — don't block on IDB
-      const url = URL.createObjectURL(blob);
-      blobUrlsRef.current.push(url);
       const provisionalId = Date.now();
-      setPhotos((prev) => [{ id: provisionalId, url, mimeType: blob.type || 'image/jpeg' }, ...prev]);
 
-      // Persist to IndexedDB in the background (doesn't block capture unlock)
-      idbSavePhoto(blob)
-        .then((savedId) => {
-          // Swap provisional ID for the real DB ID (needed for correct delete later)
-          setPhotos((prev) =>
-            prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
-          );
-        })
-        .catch(() => {
-          // Armazenamento cheio ou IndexedDB indisponível — avisa o usuário
-          if (storageErrorTimerRef.current) clearTimeout(storageErrorTimerRef.current);
-          setStorageError('Armazenamento cheio — foto salva temporariamente');
-          storageErrorTimerRef.current = setTimeout(() => setStorageError(null), 4000);
+      if (saveAsBase64Ref.current) {
+        // ── Modo base64: converte blob para Data URL e salva sem criar object URL ──
+        const dataUrl = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.onerror = rej;
+          reader.readAsDataURL(blob);
         });
+        setPhotos((prev) => [{ id: provisionalId, url: dataUrl, mimeType: blob.type || 'image/jpeg' }, ...prev]);
+
+        idbSavePhotoBase64(dataUrl, blob.type || 'image/jpeg')
+          .then((savedId) => {
+            setPhotos((prev) =>
+              prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
+            );
+          })
+          .catch(() => {
+            if (storageErrorTimerRef.current) clearTimeout(storageErrorTimerRef.current);
+            setStorageError('Armazenamento cheio — foto salva temporariamente');
+            storageErrorTimerRef.current = setTimeout(() => setStorageError(null), 4000);
+          });
+      } else {
+        // ── Modo blob: comportamento padrão (object URL) ──
+        const url = URL.createObjectURL(blob);
+        blobUrlsRef.current.push(url);
+        setPhotos((prev) => [{ id: provisionalId, url, mimeType: blob.type || 'image/jpeg' }, ...prev]);
+
+        // Persist to IndexedDB in the background (doesn't block capture unlock)
+        idbSavePhoto(blob)
+          .then((savedId) => {
+            // Swap provisional ID for the real DB ID (needed for correct delete later)
+            setPhotos((prev) =>
+              prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
+            );
+          })
+          .catch(() => {
+            // Armazenamento cheio ou IndexedDB indisponível — avisa o usuário
+            if (storageErrorTimerRef.current) clearTimeout(storageErrorTimerRef.current);
+            setStorageError('Armazenamento cheio — foto salva temporariamente');
+            storageErrorTimerRef.current = setTimeout(() => setStorageError(null), 4000);
+          });
+      }
     } catch (err) {
       console.error('Erro ao capturar foto:', err);
     } finally {
@@ -621,7 +654,7 @@ export function useCamera({
   const deletePhoto = useCallback(async (id) => {
     setPhotos((prev) => {
       const photo = prev.find((p) => p.id === id);
-      if (photo) {
+      if (photo && photo.url && !photo.url.startsWith('data:')) {
         URL.revokeObjectURL(photo.url);
         blobUrlsRef.current = blobUrlsRef.current.filter((u) => u !== photo.url);
       }

@@ -3,6 +3,13 @@ import JSZip from 'jszip';
 import * as exifr from 'exifr';
 import styles from './Gallery.module.css';
 import { useBackButton } from '../../hooks/useBackButton';
+import CloudModal from '../CloudModal/CloudModal';
+import {
+  getCloudSession,
+  cloudLoadPhotos,
+  cloudDeletePhoto,
+  cloudUploadPhoto,
+} from '../../utils/cloudDB';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -48,6 +55,12 @@ function CropIcon() {
 function ShareIcon({ size = 22 }) {
   return <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>;
 }
+function CloudIcon({ size = 22 }) {
+  return <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" /></svg>;
+}
+function CloudUploadIcon({ size = 20 }) {
+  return <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" /></svg>;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -81,6 +94,19 @@ function downloadBlob(url, filename) {
   a.href = url;
   a.download = filename;
   a.click();
+}
+
+/** Converte qualquer URL de foto (blob: ou data:) para Data URL base64 */
+async function toBase64DataUrl(url) {
+  if (url.startsWith('data:')) return url;
+  const resp = await fetch(url);
+  const blob = await resp.blob();
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function sharePhoto(url, filename) {
@@ -340,14 +366,16 @@ function EditPanel({ photo, onClose, onSaveEdit }) {
 }
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
-function ContextMenu({ photo, isFavorite, onClose, onDownload, onShare, onDelete, onProperties, onEdit, onToggleFavorite }) {
+function ContextMenu({ photo, isFavorite, isCloud, cloudLoggedIn, onClose, onDownload, onShare, onDelete, onProperties, onEdit, onToggleFavorite, onUploadToCloud }) {
   return (
     <div className={styles.modalBackdrop} onClick={onClose}>
       <div className={styles.contextMenu} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.ctxBtn} onClick={() => { onToggleFavorite(photo.id); onClose(); }}>
-          <StarIcon filled={isFavorite} />
-          <span>{isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}</span>
-        </button>
+        {!isCloud && (
+          <button className={styles.ctxBtn} onClick={() => { onToggleFavorite(photo.id); onClose(); }}>
+            <StarIcon filled={isFavorite} />
+            <span>{isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}</span>
+          </button>
+        )}
         <div className={styles.ctxDivider} />
         <button className={styles.ctxBtn} onClick={() => { onShare(); onClose(); }}>
           <ShareIcon size={20} /><span>Compartilhar</span>
@@ -355,12 +383,22 @@ function ContextMenu({ photo, isFavorite, onClose, onDownload, onShare, onDelete
         <button className={styles.ctxBtn} onClick={() => { onDownload(); onClose(); }}>
           <DownloadIcon size={20} /><span>Baixar foto</span>
         </button>
-        <button className={styles.ctxBtn} onClick={() => { onEdit(); onClose(); }}>
-          <CropIcon /><span>Editar</span>
-        </button>
+        {!isCloud && (
+          <button className={styles.ctxBtn} onClick={() => { onEdit(); onClose(); }}>
+            <CropIcon /><span>Editar</span>
+          </button>
+        )}
         <button className={styles.ctxBtn} onClick={() => { onProperties(); onClose(); }}>
           <InfoIcon /><span>Propriedades</span>
         </button>
+        {!isCloud && cloudLoggedIn && (
+          <>
+            <div className={styles.ctxDivider} />
+            <button className={styles.ctxBtn} onClick={() => { onUploadToCloud(); onClose(); }}>
+              <CloudUploadIcon size={20} /><span>Copiar para nuvem</span>
+            </button>
+          </>
+        )}
         <div className={styles.ctxDivider} />
         <button className={styles.ctxBtn + ' ' + styles.ctxBtnDelete} onClick={() => { onDelete(); onClose(); }}>
           <DeleteIcon size={20} /><span>Excluir foto</span>
@@ -384,6 +422,79 @@ export default function Gallery({ photos, onClose, onDelete }) {
     catch { return new Set(); }
   });
 
+  // ── Cloud state ──────────────────────────────────────────────────────────────
+  const [cloudSession,    setCloudSession]    = useState(() => getCloudSession());
+  const [cloudSource,     setCloudSource]     = useState('local');  // 'local' | 'cloud'
+  const [cloudPhotos,     setCloudPhotos]     = useState([]);
+  const [cloudLoading,    setCloudLoading]    = useState(false);
+  const [cloudError,      setCloudError]      = useState(null);
+  const [uploadingToCloud, setUploadingToCloud] = useState(false);
+  const [showCloudModal,  setShowCloudModal]  = useState(false);
+  const [uploadSuccess,   setUploadSuccess]   = useState(false);
+
+  const activePhotos = cloudSource === 'cloud' ? cloudPhotos : photos;
+
+  const refreshCloudPhotos = useCallback(async () => {
+    if (!getCloudSession()) return;
+    setCloudLoading(true);
+    try {
+      const p = await cloudLoadPhotos();
+      setCloudPhotos(p);
+    } catch (err) {
+      setCloudError(err.message || 'Erro ao carregar nuvem');
+    } finally {
+      setCloudLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cloudSource === 'cloud' && cloudSession) refreshCloudPhotos();
+  }, [cloudSource, cloudSession, refreshCloudPhotos]);
+
+  const handleCloudLogin = useCallback((result) => {
+    const session = getCloudSession();
+    setCloudSession(session);
+    setShowCloudModal(false);
+    setCloudSource('cloud');
+    refreshCloudPhotos();
+  }, [refreshCloudPhotos]);
+
+  const handleCloudLogout = useCallback(() => {
+    setCloudSession(null);
+    setCloudSource('local');
+    setCloudPhotos([]);
+    setShowCloudModal(false);
+  }, []);
+
+  const handleUploadToCloud = useCallback(async (photo) => {
+    if (!cloudSession) return;
+    setUploadingToCloud(true);
+    setCloudError(null);
+    try {
+      const url = photo.url; // usa a URL original (base64 ou blob)
+      const dataUrl = await toBase64DataUrl(url);
+      await cloudUploadPhoto(dataUrl, photo.mimeType, photo.createdAt);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2500);
+      if (cloudSource === 'cloud') await refreshCloudPhotos();
+    } catch (err) {
+      setCloudError(err.message || 'Erro ao enviar para nuvem');
+      setTimeout(() => setCloudError(null), 3000);
+    } finally {
+      setUploadingToCloud(false);
+    }
+  }, [cloudSession, cloudSource, refreshCloudPhotos]);
+
+  const handleCloudDelete = useCallback(async (id) => {
+    try {
+      await cloudDeletePhoto(id);
+      setCloudPhotos((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setCloudError(err.message || 'Erro ao excluir da nuvem');
+      setTimeout(() => setCloudError(null), 3000);
+    }
+  }, []);
+
   const [showDownloadModal,    setShowDownloadModal]    = useState(false);
   const [showDeleteModal,      setShowDeleteModal]      = useState(false);
   const [showDeleteSingleModal,setShowDeleteSingleModal] = useState(false);
@@ -405,7 +516,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
   const singlePanRef   = useRef(null);   // { startX, startY, panX, panY } — pan gesture
   const lastTapRef     = useRef(0);      // timestamp of last tap (double-tap detection)
 
-  const selectedPhoto = selectedIndex !== null ? photos[selectedIndex] : null;
+  const selectedPhoto = selectedIndex !== null ? activePhotos[selectedIndex] : null;
   const displayUrl = (photo) => (photo && editedUrls[photo.id]) || (photo && photo.url);
 
   const toggleFavorite = useCallback((id) => {
@@ -419,11 +530,16 @@ export default function Gallery({ photos, onClose, onDelete }) {
 
   const handleDelete = useCallback(
     async (id) => {
+      if (cloudSource === 'cloud') {
+        await handleCloudDelete(id);
+        if (selectedPhoto && selectedPhoto.id === id) setSelectedIndex(null);
+        return;
+      }
       if (favorites.has(id)) return;
       await onDelete(id);
       if (selectedPhoto && selectedPhoto.id === id) setSelectedIndex(null);
     },
-    [onDelete, selectedPhoto, favorites]
+    [onDelete, selectedPhoto, favorites, cloudSource, handleCloudDelete]
   );
 
   const handleSaveEdit = useCallback(async (id, newUrl) => {
@@ -445,7 +561,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
   };
 
   const selectAll = () => {
-    setSelectedIds(selectedIds.size === photos.length ? new Set() : new Set(photos.map((p) => p.id)));
+    setSelectedIds(selectedIds.size === activePhotos.length ? new Set() : new Set(activePhotos.map((p) => p.id)));
   };
 
   const handleGridItemClick = (photo, index) => {
@@ -459,9 +575,9 @@ export default function Gallery({ photos, onClose, onDelete }) {
     setShowContextMenu(true);
   };
 
-  const selectedPhotos = photos.filter((p) => selectedIds.has(p.id));
+  const selectedPhotos = activePhotos.filter((p) => selectedIds.has(p.id));
   const count = selectedIds.size;
-  const allSelected = photos.length > 0 && count === photos.length;
+  const allSelected = activePhotos.length > 0 && count === activePhotos.length;
 
   const handleDownloadZip = async () => {
     setShowDownloadModal(false);
@@ -485,7 +601,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
   };
 
   const navigatePrev = () => { if (selectedIndex > 0) setSelectedIndex((i) => i - 1); };
-  const navigateNext = () => { if (selectedIndex < photos.length - 1) setSelectedIndex((i) => i + 1); };
+  const navigateNext = () => { if (selectedIndex < activePhotos.length - 1) setSelectedIndex((i) => i + 1); };
 
   const longPressTimer = useRef(null);
   const makeLongPressHandlers = (photo, index) => ({
@@ -576,6 +692,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
   useBackButton(showDownloadModal,     () => setShowDownloadModal(false));
   useBackButton(showDeleteModal,       () => setShowDeleteModal(false));
   useBackButton(showDeleteSingleModal, () => setShowDeleteSingleModal(false));
+  useBackButton(showCloudModal,        () => setShowCloudModal(false));
 
   // Reset zoom / pan / rotation when navigating between photos
   useEffect(() => {
@@ -621,7 +738,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
         <div className={styles.viewer}>
           <div className={styles.viewerTop}>
             <button className={styles.iconBtn} onClick={() => setSelectedIndex(null)} aria-label="Voltar"><BackIcon /></button>
-            <span className={styles.viewerCounter}>{selectedIndex + 1} / {photos.length}</span>
+            <span className={styles.viewerCounter}>{selectedIndex + 1} / {activePhotos.length}</span>
             <div className={styles.viewerActions}>
               <button className={styles.iconBtn} onClick={rotateViewer} aria-label="Girar foto 90°">
                 <RotateRightIcon />
@@ -657,7 +774,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
               }}
               {...makeLongPressHandlers(selectedPhoto, selectedIndex)}
             />
-            {selectedIndex < photos.length - 1 && (
+            {selectedIndex < activePhotos.length - 1 && (
               <button className={styles.navBtn + ' ' + styles.navNext} onClick={navigateNext} aria-label="Próxima">›</button>
             )}
           </div>
@@ -686,24 +803,74 @@ export default function Gallery({ photos, onClose, onDelete }) {
             ) : (
               <>
                 <button className={styles.iconBtn} onClick={onClose} aria-label="Fechar"><CloseIcon /></button>
-                <span className={styles.title}>Galeria ({photos.length})</span>
-                {photos.length > 0
-                  ? <button className={styles.iconBtn} onClick={toggleSelectMode} aria-label="Selecionar"><SelectIcon /></button>
-                  : <div style={{ width: 44 }} />}
+                <span className={styles.title}>
+                  {cloudSource === 'cloud' ? `Nuvem (${activePhotos.length})` : `Galeria (${photos.length})`}
+                </span>
+                <div className={styles.headerActions}>
+                  <button
+                    className={styles.iconBtn + (cloudSession ? ' ' + styles.cloudBtnActive : '')}
+                    onClick={() => setShowCloudModal(true)}
+                    aria-label="Conta na nuvem"
+                    title={cloudSession ? `Nuvem: ${cloudSession.user}` : 'Entrar na nuvem'}
+                  >
+                    <CloudIcon size={22} />
+                  </button>
+                  {photos.length > 0 || cloudSource === 'cloud'
+                    ? <button className={styles.iconBtn} onClick={toggleSelectMode} aria-label="Selecionar"><SelectIcon /></button>
+                    : <div style={{ width: 44 }} />}
+                </div>
               </>
             )}
           </div>
 
-          {photos.length === 0 ? (
+          {/* ── Seletor local / nuvem ── */}
+          {cloudSession && !selectMode && (
+            <div className={styles.sourceSelector}>
+              <select
+                className={styles.sourceSelectorInput}
+                value={cloudSource}
+                onChange={(e) => {
+                  setCloudSource(e.target.value);
+                  setSelectedIndex(null);
+                }}
+                aria-label="Origem das fotos"
+              >
+                <option value="local">📱 Local</option>
+                <option value="cloud">☁️ Nuvem — {cloudSession.user}</option>
+              </select>
+            </div>
+          )}
+
+          {/* ── Feedback cloud ── */}
+          {uploadingToCloud && (
+            <div className={styles.cloudToast}>Enviando para nuvem…</div>
+          )}
+          {uploadSuccess && (
+            <div className={styles.cloudToastSuccess}>✓ Foto enviada para a nuvem!</div>
+          )}
+          {cloudError && (
+            <div className={styles.cloudToastError}>{cloudError}</div>
+          )}
+
+          {cloudSource === 'cloud' && cloudLoading ? (
+            <div className={styles.empty}>
+              <div className={styles.cloudLoadingSpinner} />
+              <p className={styles.emptyText}>Carregando da nuvem…</p>
+            </div>
+          ) : activePhotos.length === 0 ? (
             <div className={styles.empty}>
               <svg viewBox="0 0 24 24" fill="currentColor" width={56} height={56} style={{ color: 'rgba(255,255,255,0.2)' }}>
-                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                {cloudSource === 'cloud'
+                  ? <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
+                  : <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />}
               </svg>
-              <p className={styles.emptyText}>Nenhuma foto ainda</p>
+              <p className={styles.emptyText}>
+                {cloudSource === 'cloud' ? 'Nenhuma foto na nuvem' : 'Nenhuma foto ainda'}
+              </p>
             </div>
           ) : (
             <div className={styles.grid}>
-              {photos.map((photo, index) => {
+              {activePhotos.map((photo, index) => {
                 const isSelected = selectedIds.has(photo.id);
                 const isFav = favorites.has(photo.id);
                 return (
@@ -715,7 +882,8 @@ export default function Gallery({ photos, onClose, onDelete }) {
                     aria-label={'Foto ' + (index + 1) + (isSelected ? ' (selecionada)' : '')}
                   >
                     <img src={photo.url} alt={'Foto ' + (index + 1)} className={styles.gridThumb} />
-                    {isFav && !selectMode && <span className={styles.favBadge}>★</span>}
+                    {isFav && !selectMode && !photo.isCloud && <span className={styles.favBadge}>★</span>}
+                    {photo.isCloud && !selectMode && <span className={styles.cloudBadge}><CloudIcon size={12} /></span>}
                     {selectMode && (
                       <div className={styles.checkCircle + (isSelected ? ' ' + styles.checkCircleActive : '')}>
                         {isSelected && <CheckIcon />}
@@ -753,6 +921,8 @@ export default function Gallery({ photos, onClose, onDelete }) {
         <ContextMenu
           photo={contextPhoto}
           isFavorite={favorites.has(contextPhoto.id)}
+          isCloud={contextPhoto.isCloud}
+          cloudLoggedIn={!!cloudSession}
           onClose={() => setShowContextMenu(false)}
           onShare={() => sharePhoto(displayUrl(contextPhoto), photoFilename(contextPhoto, (contextIndex || 0) + 1))}
           onDownload={() => downloadBlob(displayUrl(contextPhoto), photoFilename(contextPhoto, (contextIndex || 0) + 1))}
@@ -760,6 +930,7 @@ export default function Gallery({ photos, onClose, onDelete }) {
           onProperties={() => setShowProperties(true)}
           onEdit={() => setShowEdit(true)}
           onToggleFavorite={toggleFavorite}
+          onUploadToCloud={() => handleUploadToCloud(contextPhoto)}
         />
       )}
 
@@ -837,6 +1008,15 @@ export default function Gallery({ photos, onClose, onDelete }) {
           </div>
         );
       })()}
+
+      {showCloudModal && (
+        <CloudModal
+          session={cloudSession}
+          onLogin={handleCloudLogin}
+          onLogout={handleCloudLogout}
+          onClose={() => setShowCloudModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 # 📷 Camera MIUI — Câmera Xiaomi em React
 
 [![Deploy](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml/badge.svg)](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml)
-[![Version](https://img.shields.io/badge/versão-1.0.7-yellow)](#)
+[![Version](https://img.shields.io/badge/versão-1.1.0-yellow)](#)
 [![PWA](https://img.shields.io/badge/PWA-instalável-blue)](#)
 
 Aplicação React PWA que simula a interface da câmera MIUI (Xiaomi), com acesso real à câmera do dispositivo via Web API. Instalável como app nativo em Android e iOS.
@@ -42,11 +42,13 @@ src/
 │   └── useSettings.js        # Gerenciamento de configurações persistidas
 ├── utils/
 │   ├── changelog.js          # Fonte única de versão e histórico de mudanças
+│   ├── cloudDB.js            # Armazenamento em nuvem simulado via localStorage (por conta)
 │   ├── filterMap.js          # Mapa de filtros CSS e modo Pro
 │   ├── modeProfiles.js       # Perfis por modo (noturno, retrato, pro...)
-│   └── photoDB.js            # Persistência de fotos via IndexedDB
+│   └── photoDB.js            # Persistência de fotos via IndexedDB (blob e base64)
 ├── components/
 │   ├── Camera/               # Viewfinder (<video>) + foco ring + slider de exposição
+│   ├── CloudModal/           # Modal de login/conta para a galeria em nuvem
 │   ├── TopBar/               # Barra superior (flash, timer, grade, tela cheia, configurações)
 │   ├── ZoomControl/          # Botões de preset de zoom + slider fino
 │   ├── ModeSelector/         # Seletor horizontal de modos
@@ -106,6 +108,10 @@ src/
 |---|---|
 | **Persistência** | Fotos salvas em IndexedDB — sobrevivem ao recarregamento |
 | **Formato correto** | Extensão do arquivo reflete o formato real (`.jpg`, `.png`, `.webp`) |
+| **Galeria em Nuvem** | Login/cadastro com usuário e senha — fotos sincronizadas em nuvem local por conta |
+| **Seletor Local / Nuvem** | Alterna a origem das fotos exibidas na galeria |
+| **Copiar para Nuvem** | Menu de contexto permite enviar uma foto local para a nuvem quando logado |
+| **Armazenar como Base64** | Opção para salvar fotos como texto no IndexedDB sem gerar arquivo físico |
 | **Visualizador** | Full-screen com navegação anterior/próxima |
 | **Zoom e pan** | Pinch-to-zoom, pan livre e duplo-toque para alternar 1× / 2,5× no viewer |
 | **Rotação** | Botão de rotação 90° CW na barra do viewer |
@@ -138,6 +144,7 @@ src/
 | **Filtro de preview** | Nenhum, Vivid, Suave, P&B, Sépia, Cinema |
 | **Vinheta** | Liga/desliga |
 | **Tecla de captura** | Toggle on/off + seleção de tecla: Vol +, Vol −, Espaço, Enter |
+| **Salvar como Base64** | Armazena fotos como texto no IndexedDB — sem arquivo físico, ideal para nuvem |
 | **Reset** | Restaurar padrões de fábrica |
 | **Forçar atualização** | Limpa cache do Service Worker |
 | **Sobre** | Versão, créditos, link GitHub |
@@ -169,6 +176,16 @@ Inspirado no MIUI Camera da Xiaomi:
 ---
 
 ## 📦 Changelog
+
+### v1.1.0 — Abril 2026
+- Galeria em Nuvem: login/cadastro com usuário e senha — conta criada automaticamente no primeiro acesso
+- Galeria em Nuvem: armazenamento simulado em localStorage com fotos por usuário (base64)
+- Galeria em Nuvem: modal de conta exibe estatísticas (nº de fotos e KB usados)
+- Galeria em Nuvem: seletor Local / Nuvem para alternar a origem das fotos exibidas
+- Galeria em Nuvem: menu de contexto exibe "Copiar para nuvem" ao segurar uma foto local quando logado
+- Galeria em Nuvem: badge azul nas fotos provenientes da nuvem no grid
+- Configurações: toggle "Salvar como Base64" — armazena fotos sem gerar arquivo físico (ideal para nuvem)
+- Fotos base64: carregadas diretamente sem ObjectURL — reduz uso de memória e evita vazamentos
 
 ### v1.0.9 — Abril 2026
 - Feedback háptico: vibração ao capturar foto (30 ms), travar foco (duplo pulso), trocar câmera, flash, timer e mudar de modo

@@ -4,10 +4,24 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.0.9';
+export const LATEST_VERSION = 'v1.1.0';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.1.0',
+    date: 'Abril 2026',
+    changes: [
+      'Galeria em Nuvem: login/cadastro com usuário e senha — conta criada automaticamente no primeiro acesso',
+      'Galeria em Nuvem: armazenamento simulado em localStorage com fotos por usuário (base64)',
+      'Galeria em Nuvem: modal de conta exibe estatísticas (nº de fotos e KB usados)',
+      'Galeria em Nuvem: seletor Local / Nuvem para alternar a origem das fotos exibidas',
+      'Galeria em Nuvem: menu de contexto exibe opção "Copiar para nuvem" ao segurar/abrir uma foto local quando logado',
+      'Galeria em Nuvem: badge azul de nuvem nas fotos provenientes da nuvem no grid',
+      'Configurações: toggle "Salvar como Base64" — armazena fotos como texto no IndexedDB sem gerar arquivo físico (ideal para nuvem)',
+      'Fotos em base64: carregadas diretamente sem criar ObjectURL — reduz uso de memória e evita vazamentos',
+    ],
+  },
   {
     version: 'v1.0.9',
     date: 'Abril 2026',

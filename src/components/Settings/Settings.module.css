@@ -110,11 +110,19 @@
   font-weight: 500;
 }
 
+.rowSub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 /* ── Toggle row (label + switch on one line) ───────────────────── */
 .toggleRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 

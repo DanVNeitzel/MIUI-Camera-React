@@ -202,6 +202,22 @@ export default function Settings({ settings, onUpdate, onReset, onClose }) {
             />
           </SettingRow>
 
+          <div className={styles.toggleRow}>
+            <div>
+              <span className={styles.rowLabel}>Salvar como Base64</span>
+              <p className={styles.rowSub}>Armazena fotos como texto — sem arquivo físico, ideal para nuvem</p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.saveAsBase64 ?? false}
+              className={`${styles.toggleBtn} ${(settings.saveAsBase64 ?? false) ? styles.toggleOn : ''}`}
+              onClick={() => onUpdate('saveAsBase64', !(settings.saveAsBase64 ?? false))}
+              aria-label="Salvar como Base64"
+            >
+              <span className={styles.toggleThumb} />
+            </button>
+          </div>
+
           {/* ── VÍDEO ───────────────────────── */}
           <SectionTitle>VÍDEO</SectionTitle>
 

@@ -17,17 +17,46 @@ function openDB() {
   });
 }
 
+/** Salva uma foto como Blob no IndexedDB. */
 export async function savePhoto(blob) {
   const db = await openDB();
   const id = Date.now();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).add({ id, blob, createdAt: new Date().toISOString() });
+    tx.objectStore(STORE_NAME).add({
+      id,
+      blob,
+      storageType: 'blob',
+      mimeType: blob.type || 'image/jpeg',
+      createdAt: new Date().toISOString(),
+    });
     tx.oncomplete = () => resolve(id);
     tx.onerror = () => reject(tx.error);
   });
 }
 
+/**
+ * Salva uma foto como Data URL (base64) no IndexedDB.
+ * Não cria arquivos físicos nem URLs de objeto — ideal para upload na nuvem.
+ */
+export async function savePhotoBase64(dataUrl, mimeType) {
+  const db = await openDB();
+  const id = Date.now();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add({
+      id,
+      base64: dataUrl,
+      storageType: 'base64',
+      mimeType: mimeType || 'image/jpeg',
+      createdAt: new Date().toISOString(),
+    });
+    tx.oncomplete = () => resolve(id);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** Carrega todas as fotos. Retorna objetos brutos (sem criar URLs). */
 export async function loadPhotos() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
