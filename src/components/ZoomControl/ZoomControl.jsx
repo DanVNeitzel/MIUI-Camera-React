@@ -2,7 +2,6 @@ import { useState } from 'react';
 import styles from './ZoomControl.module.css';
 
 const PRESETS = [
-  { label: '0.6×', value: 0.6 },
   { label: '1×', value: 1 },
   { label: '2×', value: 2 },
   { label: '5×', value: 5 },
@@ -26,9 +25,9 @@ export default function ZoomControl({ zoom, onZoomChange }) {
     setShowSlider((prev) => !prev);
   };
 
-  // Logarithmic scale: slider 0-100 ↔ zoom 0.5-8
+  // Logarithmic scale: slider 0-100 ↔ zoom 1-8
   // Gives finer control in the 1×-3× range, like real camera optics
-  const LOG_MIN = Math.log(0.5);
+  const LOG_MIN = Math.log(1);
   const LOG_MAX = Math.log(8);
   const sliderValue = ((Math.log(zoom) - LOG_MIN) / (LOG_MAX - LOG_MIN)) * 100;
 
@@ -42,7 +41,7 @@ export default function ZoomControl({ zoom, onZoomChange }) {
     <div className={styles.wrapper}>
       {showSlider && (
         <div className={styles.sliderContainer}>
-          <span className={styles.sliderMin}>0.5×</span>
+          <span className={styles.sliderMin}>1×</span>
           <input
             type="range"
             min={0}

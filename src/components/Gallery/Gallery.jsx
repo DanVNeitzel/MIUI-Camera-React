@@ -9,6 +9,7 @@ import {
   cloudLoadPhotos,
   cloudDeletePhoto,
   cloudUploadPhoto,
+  cloudLoadPhotoFull,
 } from '../../utils/cloudDB';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -579,14 +580,26 @@ export default function Gallery({ photos, onClose, onDelete, onLoadFull }) {
 
   // Quando o viewer abre para um thumbnail, carregar imagem em resolução completa
   useEffect(() => {
-    if (!selectedPhoto || !selectedPhoto.isThumb || fullUrls[selectedPhoto.id] || !onLoadFull) return;
+    if (!selectedPhoto || !selectedPhoto.isThumb || fullUrls[selectedPhoto.id]) return;
     let cancelled = false;
-    onLoadFull(selectedPhoto.id).then((full) => {
-      if (!cancelled && full) {
-        if (full.url && full.url.startsWith('blob:')) fullBlobUrlsRef.current.push(full.url);
-        setFullUrls((prev) => ({ ...prev, [selectedPhoto.id]: full.url }));
-      }
-    }).catch(() => {});
+
+    if (selectedPhoto.isCloud) {
+      // Foto de nuvem: carrega o full-res via cloudLoadPhotoFull
+      cloudLoadPhotoFull(selectedPhoto.id).then((full) => {
+        if (!cancelled && full) {
+          setFullUrls((prev) => ({ ...prev, [selectedPhoto.id]: full.url }));
+        }
+      }).catch(() => {});
+    } else if (onLoadFull) {
+      // Foto local: usa o callback do hook
+      onLoadFull(selectedPhoto.id).then((full) => {
+        if (!cancelled && full) {
+          if (full.url && full.url.startsWith('blob:')) fullBlobUrlsRef.current.push(full.url);
+          setFullUrls((prev) => ({ ...prev, [selectedPhoto.id]: full.url }));
+        }
+      }).catch(() => {});
+    }
+
     return () => { cancelled = true; };
   }, [selectedPhoto?.id]); // eslint-disable-line
 

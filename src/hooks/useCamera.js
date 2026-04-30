@@ -11,7 +11,7 @@ import {
 } from '../utils/photoDB';
 import { FILTER_CSS } from '../utils/filterMap';
 
-const QUALITY_MAP = { low: 0.6, medium: 0.78, high: 0.92, max: 1.0 };
+const QUALITY_MAP = { low: 0.6, medium: 0.78, high: 0.88, max: 1.0 };
 const MIME_MAP    = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const RES_MAP     = {
   '720p':  { width: { ideal: 1280 }, height: { ideal: 720  } },
@@ -145,9 +145,37 @@ async function stackFrames(video, vw, vh, canvasW, canvasH, cssFilter, isFront, 
 
 /**
  * Gera um thumbnail pequeno (máx. maxPx px) a partir de um Blob.
+ * Usa createImageBitmap + OffscreenCanvas (off-thread) quando disponível.
  * Retorna uma Data URL JPEG ou null em caso de falha.
  */
 async function generateThumb(blob, maxPx = 320, quality = 0.55) {
+  try {
+    if (typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(blob);
+      const ratio = Math.min(maxPx / bmp.width, maxPx / bmp.height, 1);
+      const w = Math.round(bmp.width * ratio);
+      const h = Math.round(bmp.height * ratio);
+      if (typeof OffscreenCanvas !== 'undefined') {
+        const oc = new OffscreenCanvas(w, h);
+        oc.getContext('2d').drawImage(bmp, 0, 0, w, h);
+        bmp.close();
+        const thumbBlob = await oc.convertToBlob({ type: 'image/jpeg', quality });
+        return await new Promise((res) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.onerror = () => res(null);
+          reader.readAsDataURL(thumbBlob);
+        });
+      }
+      // OffscreenCanvas indisponível mas createImageBitmap disponível
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      return canvas.toDataURL('image/jpeg', quality);
+    }
+  } catch (_) {}
+  // Fallback: Image element no main thread
   const url = URL.createObjectURL(blob);
   return new Promise((resolve) => {
     const img = new Image();
@@ -168,8 +196,15 @@ async function generateThumb(blob, maxPx = 320, quality = 0.55) {
 
 /**
  * Gera um thumbnail a partir de uma Data URL.
+ * Usa createImageBitmap + OffscreenCanvas (off-thread) quando disponível.
  */
 async function generateThumbFromDataUrl(dataUrl, maxPx = 320, quality = 0.55) {
+  try {
+    if (typeof createImageBitmap === 'function') {
+      const fetchBlob = await fetch(dataUrl).then((r) => r.blob());
+      return generateThumb(fetchBlob, maxPx, quality);
+    }
+  } catch (_) {}
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -506,7 +541,7 @@ export function useCamera({
 
   const handleZoomChange = useCallback(
     (newZoom) => {
-      const clamped = Math.max(0.5, Math.min(8, newZoom));
+      const clamped = Math.max(1, Math.min(8, newZoom));
       setZoom(clamped);
       zoomRef.current = clamped;
       applyNativeZoom(clamped);
@@ -574,35 +609,78 @@ export function useCamera({
       const canvasW        = needsRotation ? vh : vw;
       const canvasH        = needsRotation ? vw : vh;
 
-      if (frames > 1) {
-        // ── Night mode: multi-frame pixel-averaging (noise reduction) ──
-        blob = await stackFrames(
-          video, vw, vh, canvasW, canvasH, cssFilter, isFront, angle, needsRotation, frames, mime, quality
-        );
-      } else if (typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap === 'function') {
-        // Off-thread rendering — doesn't block main thread for large frames
-        const bitmap = await createImageBitmap(video);
-        const offscreen = new OffscreenCanvas(canvasW, canvasH);
-        const ctx = offscreen.getContext('2d');
-        ctx.save();
-        applyFrameToContext(ctx, bitmap, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
-        ctx.restore();
-        bitmap.close();
-        blob = await offscreen.convertToBlob(
-          mime === 'image/png' ? { type: mime } : { type: mime, quality }
-        );
-      } else {
-        // Fallback: synchronous canvas on main thread
-        const canvas = canvasRef.current;
-        canvas.width  = canvasW;
-        canvas.height = canvasH;
-        const ctx = canvas.getContext('2d');
-        ctx.save();
-        applyFrameToContext(ctx, video, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
-        ctx.restore();
-        blob = await new Promise((res) =>
-          mime === 'image/png' ? canvas.toBlob(res, mime) : canvas.toBlob(res, mime, quality)
-        );
+      // earlyThumb: data URL pré-gerado durante o encode (evita double-decode)
+      let earlyThumb = null;
+
+      // ── ImageCapture: caminho mais rápido (encoder de hardware, sem canvas) ──
+      // Usado quando não há filtro CSS, câmera traseira e formato não-PNG.
+      if (
+        frames <= 1 &&
+        !cssFilter &&
+        !isFront &&
+        mime !== 'image/png' &&
+        typeof ImageCapture !== 'undefined' &&
+        streamRef.current
+      ) {
+        try {
+          const track = streamRef.current.getVideoTracks()[0];
+          if (track?.readyState === 'live') {
+            const ic = new ImageCapture(track);
+            blob = await ic.takePhoto();
+          }
+        } catch (_) {
+          blob = null;
+        }
+      }
+
+      if (!blob) {
+        if (frames > 1) {
+          // ── Night mode: multi-frame pixel-averaging (noise reduction) ──
+          blob = await stackFrames(
+            video, vw, vh, canvasW, canvasH, cssFilter, isFront, angle, needsRotation, frames, mime, quality
+          );
+        } else if (typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap === 'function') {
+          // Off-thread rendering — doesn't block main thread for large frames
+          const bitmap = await createImageBitmap(video);
+          const offscreen = new OffscreenCanvas(canvasW, canvasH);
+          const ctx = offscreen.getContext('2d');
+          ctx.save();
+          applyFrameToContext(ctx, bitmap, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
+          ctx.restore();
+          bitmap.close();
+
+          // Thumbnail canvas gerado por GPU blit (~1 ms) antes do encode
+          const tRatio = Math.min(320 / canvasW, 320 / canvasH, 1);
+          const tw = Math.round(canvasW * tRatio);
+          const th = Math.round(canvasH * tRatio);
+          const thumbOC = new OffscreenCanvas(tw, th);
+          thumbOC.getContext('2d').drawImage(offscreen, 0, 0, tw, th);
+
+          // Encode full-res e thumbnail em paralelo
+          [blob, earlyThumb] = await Promise.all([
+            offscreen.convertToBlob(mime === 'image/png' ? { type: mime } : { type: mime, quality }),
+            thumbOC.convertToBlob({ type: 'image/jpeg', quality: 0.55 }).then(
+              (tb) => new Promise((res) => {
+                const reader = new FileReader();
+                reader.onload = () => res(reader.result);
+                reader.onerror = () => res(null);
+                reader.readAsDataURL(tb);
+              })
+            ).catch(() => null),
+          ]);
+        } else {
+          // Fallback: synchronous canvas on main thread
+          const canvas = canvasRef.current;
+          canvas.width  = canvasW;
+          canvas.height = canvasH;
+          const ctx = canvas.getContext('2d');
+          ctx.save();
+          applyFrameToContext(ctx, video, vw, vh, canvasW, canvasH, isFront, angle, needsRotation, cssFilter);
+          ctx.restore();
+          blob = await new Promise((res) =>
+            mime === 'image/png' ? canvas.toBlob(res, mime) : canvas.toBlob(res, mime, quality)
+          );
+        }
       }
 
       // Add photo to UI immediately with a provisional ID — don't block on IDB
@@ -623,8 +701,8 @@ export function useCamera({
             setPhotos((prev) =>
               prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
             );
-            // Gerar thumbnail em background
-            generateThumb(blob)
+            // Gerar thumbnail em background (usa earlyThumb se já disponível)
+            (earlyThumb ? Promise.resolve(earlyThumb) : generateThumb(blob))
               .then((thumbDataUrl) => {
                 if (thumbDataUrl) idbSaveThumb(savedId, thumbDataUrl, blob.type || 'image/jpeg', new Date().toISOString()).catch(() => {});
               })
@@ -648,8 +726,8 @@ export function useCamera({
             setPhotos((prev) =>
               prev.map((p) => (p.id === provisionalId ? { ...p, id: savedId } : p))
             );
-            // Gerar thumbnail em background
-            generateThumb(blob)
+            // Gerar thumbnail em background (usa earlyThumb se já disponível)
+            (earlyThumb ? Promise.resolve(earlyThumb) : generateThumb(blob))
               .then((thumbDataUrl) => {
                 if (thumbDataUrl) idbSaveThumb(savedId, thumbDataUrl, blob.type || 'image/jpeg', new Date().toISOString()).catch(() => {});
               })
@@ -1044,7 +1122,7 @@ export function useCamera({
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const newZoom = Math.max(
-          0.5,
+          1,
           Math.min(8, (pinchStartZoomRef.current || 1) * (Math.hypot(dx, dy) / pinchStartDistRef.current))
         );
         setZoom(newZoom);

@@ -3,8 +3,12 @@ const STORE_NAME = 'photos';
 const STORE_THUMBS = 'thumbnails';
 const DB_VERSION = 2;
 
+// Cache da conexão — evita abrir nova conexo a cada operação
+let _dbPromise = null;
+
 function openDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
@@ -18,8 +22,9 @@ function openDB() {
       }
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => { _dbPromise = null; reject(req.error); };
   });
+  return _dbPromise;
 }
 
 /** Salva uma foto como Blob no IndexedDB. */
