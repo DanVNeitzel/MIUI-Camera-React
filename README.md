@@ -1,7 +1,7 @@
 # 📷 Camera MIUI — Câmera Xiaomi em React
 
 [![Deploy](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml/badge.svg)](https://github.com/DanVNeitzel/MIUI-Camera-React/actions/workflows/deploy.yml)
-[![Version](https://img.shields.io/badge/versão-1.2.0-yellow)](#)
+[![Version](https://img.shields.io/badge/versão-1.3.0-yellow)](#)
 [![PWA](https://img.shields.io/badge/PWA-instalável-blue)](#)
 
 Aplicação React PWA que simula a interface da câmera MIUI (Xiaomi), com acesso real à câmera do dispositivo via Web API. Instalável como app nativo em Android e iOS.

@@ -4,10 +4,26 @@
 //   1. Bump LATEST_VERSION
 //   2. Add a new entry at the top of CHANGELOG (keep existing entries)
 
-export const LATEST_VERSION = 'v1.2.0';
+export const LATEST_VERSION = 'v1.3.0';
 
 /** @type {{ version: string, date: string, changes: string[] }[]} */
 export const CHANGELOG = [
+  {
+    version: 'v1.3.0',
+    date: 'Abril 2026',
+    changes: [
+      'Captura: ImageCapture.takePhoto() usada como caminho principal na câmera traseira sem filtro — encoder de hardware, até 10× mais rápido que canvas',
+      'Captura: thumbnail gerado em paralelo ao encode full-res (OffscreenCanvas + Promise.all) — zero custo extra de tempo',
+      'Captura: qualidade “high” ajustada de 0.92 para 0.88 — encode ~15% mais rápido sem diferença visual perceptível',
+      'Captura: generateThumb usa createImageBitmap + OffscreenCanvas (off-thread) — não trava a UI ao gerar miniatura',
+      'Zoom: preset 0.6× removido — controle começa em 1×',
+      'Zoom: slider reconfigurado para 1×–8× (escala logarítmica)',
+      'Galeria: conexão IndexedDB cacheada (photoDB + cloudDB) — elimina overhead de reconexão a cada operação',
+      'Galeria em Nuvem: thumbnail (320 px JPEG) gerado automaticamente no upload e armazenado junto ao registro',
+      'Galeria em Nuvem: grade exibe apenas thumbnails (~10-20 KB) em vez de full-res (~1-3 MB) — carregamento instantâneo',
+      'Galeria em Nuvem: nova função cloudLoadPhotoFull carrega o full-res somente ao abrir a foto no viewer (lazy load)',
+    ],
+  },
   {
     version: 'v1.2.0',
     date: 'Abril 2026',
